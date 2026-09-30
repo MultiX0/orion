@@ -1,0 +1,12 @@
+# Written by Orion. Edit the provider in the app, not here.
+llm-pi-ai:
+  providers:
+    orion:
+      api: openai-completions
+      baseURL: 'https://api.deepinfra.com/v1/openai'
+      apiKeyEnv: DP_ORION_KEY
+      models:
+        - id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo'
+agent-default-model:
+  provider: orion
+  model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo'

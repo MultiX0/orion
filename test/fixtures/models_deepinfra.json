@@ -1,0 +1,73 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "meta-llama/Llama-3.3-70B-Instruct",
+      "object": "model",
+      "owned_by": "meta-llama",
+      "metadata": {
+        "context_length": 131072,
+        "capabilities": ["tools"],
+        "name": "Llama 3.3 70B Instruct"
+      }
+    },
+    {
+      "id": "meta-llama/Llama-3.2-11B-Vision-Instruct",
+      "object": "model",
+      "owned_by": "meta-llama",
+      "metadata": {
+        "context_length": 131072,
+        "capabilities": ["tools", "vision"]
+      }
+    },
+    {
+      "id": "Qwen/Qwen2.5-7B-Instruct",
+      "object": "model",
+      "owned_by": "Qwen",
+      "context_length": 32768,
+      "supports_tools": false
+    },
+    {
+      "id": "google/gemma-4-31B-it-turbo",
+      "object": "model",
+      "owned_by": "deepinfra",
+      "metadata": {
+        "context_length": 262144,
+        "max_tokens": 262144,
+        "tags": ["chat", "vlm", "vision", "prompt_cache", "reasoning"]
+      }
+    },
+    {
+      "id": "BAAI/bge-m3",
+      "object": "model",
+      "owned_by": "deepinfra",
+      "metadata": {
+        "context_length": 8192,
+        "max_tokens": 8192,
+        "tags": ["embed"]
+      }
+    },
+    {
+      "id": "openai/whisper-large-v3-turbo",
+      "object": "model",
+      "owned_by": "deepinfra",
+      "metadata": {
+        "context_length": null,
+        "max_tokens": null,
+        "pricing": {"input_seconds": 0.00000333},
+        "tags": ["stt"]
+      }
+    },
+    {
+      "id": "hexgrad/Kokoro-82M",
+      "object": "model",
+      "owned_by": "deepinfra",
+      "metadata": {
+        "context_length": null,
+        "max_tokens": null,
+        "pricing": {"input_characters": 0.62},
+        "tags": ["tts"]
+      }
+    }
+  ]
+}

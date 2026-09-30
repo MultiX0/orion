@@ -1,0 +1,8 @@
+{"orion":1,"device_id":"orion-a1b2","name":"Orion","fw":"0.1.0","ip":"192.168.1.40","port":80}
+{"orion":1,"device_id":"orion-9f31","name":"Orion Studio","fw":"0.2.0-rc1","ip":"192.168.1.57","port":8080}
+{"orion":1,"device_id":"orion-c0de","ip":"10.0.0.12"}
+{"orion":2,"device_id":"orion-old","ip":"192.168.1.41","port":80}
+{"device_id":"orion-a1b2","ip":"192.168.1.40"}
+{"orion":1,"ip":"192.168.1.42","port":80}
+{"orion":1,"device_id":"orion-a1b2","port":80}
+not json at all

@@ -1,0 +1,9 @@
+# Orion, 16 MB flash.
+# assets holds earcons, images and the system prompt. model holds the wake word
+# .tflite raw so orion_wakeword can mmap it straight into TFLite Micro.
+# Name,     Type, SubType,   Offset,   Size,     Flags
+nvs,        data, nvs,       0x9000,   0x6000,
+phy_init,   data, phy,       0xf000,   0x1000,
+factory,    app,  factory,   0x10000,  0x500000,
+assets,     data, spiffs,    0x510000, 0x200000,
+model,      data, undefined, 0x710000, 0x80000,

@@ -1,0 +1,35 @@
+PLANNED  front_bezel     REF_Board                                overlap    0.009 mm3  gap  0.000  front bosses clamp the PCB top
+ok       front_bezel     REF_CN2-CONN-SMD_4P-P1.00_HDGC_HDGC1002W overlap    0.000 mm3  gap  0.301  
+ok       front_bezel     REF_CN1-CONN-SMD_4P-P1.00_HDGC_HDGC1002W overlap    0.000 mm3  gap  0.301  
+PLANNED  front_bezel     REF_MIC1-MIC-SMD_5P-L3.0-W4.0-P0.85-BL_C overlap    0.000 mm3  gap  0.001  sealing ring sits on the mic lid
+PLANNED  front_bezel     ref_display                              overlap    0.000 mm3  gap  0.000  bezel lip rests on the glass edge
+ok       front_bezel     ref_antenna                              overlap    0.000 mm3  gap  0.000  
+PLANNED  front_bezel     ref_usb_plug                             overlap    0.000 mm3  gap  0.300  cable plug in its channel
+ok       front_bezel     ref_dock_male                            overlap    0.000 mm3  gap  0.300  
+PLANNED  rear_shell      REF_Board                                overlap    0.000 mm3  gap  0.000  standoffs carry the PCB
+ok       rear_shell      REF_SW2-KEY-SMD_K2-1806SA-AXXW-XX        overlap    0.000 mm3  gap  0.397  
+ok       rear_shell      REF_R30-R0402_14                         overlap    0.000 mm3  gap  0.475  
+ok       rear_shell      REF_CN2-CONN-SMD_4P-P1.00_HDGC_HDGC1002W overlap    0.000 mm3  gap  0.317  
+ok       rear_shell      REF_CN1-CONN-SMD_4P-P1.00_HDGC_HDGC1002W overlap    0.000 mm3  gap  0.317  
+ok       rear_shell      ref_camera                               overlap    0.000 mm3  gap  0.400  
+PLANNED  rear_shell      ref_speaker                              overlap    2.778 mm3  gap  0.071  crush ribs grip the speaker, 0.1 mm
+PLANNED  rear_shell      ref_usb_plug                             overlap    0.000 mm3  gap  0.300  cable plug in its channel
+ok       rear_shell      ref_dock_male                            overlap    0.000 mm3  gap  0.300  
+ok       button_plunger  REF_SW3-SW-SMD_L6.0-W6.0-P6.00-LS6.6_COM overlap    0.000 mm3  gap  0.200  
+PLANNED  stand           front_bezel                              overlap    0.000 mm3  gap  0.000  body rests on the pocket floor
+PLANNED  stand           rear_shell                               overlap    0.000 mm3  gap  0.000  body rests on the pocket floor
+ok       stand           ref_usb_plug                             overlap    0.000 mm3  gap  1.300  
+PLANNED  dock            front_bezel                              overlap    0.000 mm3  gap  0.000  body rests on the pocket floor
+PLANNED  dock            rear_shell                               overlap    0.000 mm3  gap  0.000  body rests on the pocket floor
+PLANNED  dock            ref_dock_male                            overlap    0.000 mm3  gap  0.000  plug held in its pocket
+
+smallest clearances (unplanned pairs):
+   0.200 mm  button_plunger vs REF_SW3-SW-SMD_L6.0-W6.0-P6.00-LS6.6_COMPOUND
+   0.300 mm  front_bezel vs ref_dock_male
+   0.300 mm  rear_shell vs ref_dock_male
+   0.301 mm  front_bezel vs REF_CN1-CONN-SMD_4P-P1.00_HDGC_HDGC1002WR-S-4P_COMPOUND
+   0.301 mm  front_bezel vs REF_CN2-CONN-SMD_4P-P1.00_HDGC_HDGC1002WR-S-4P_COMPOUND
+   0.317 mm  rear_shell vs REF_CN1-CONN-SMD_4P-P1.00_HDGC_HDGC1002WR-S-4P_COMPOUND
+   0.317 mm  rear_shell vs REF_CN2-CONN-SMD_4P-P1.00_HDGC_HDGC1002WR-S-4P_COMPOUND
+   0.397 mm  rear_shell vs REF_SW2-KEY-SMD_K2-1806SA-AXXW-XX
+FAILURES: 0

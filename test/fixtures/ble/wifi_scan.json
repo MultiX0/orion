@@ -1,0 +1,9 @@
+[
+  {"ssid": "Hearth", "rssi": -71, "auth": 3, "channel": 11},
+  {"ssid": "Kepler Guest", "rssi": -63, "auth": 0, "channel": 1},
+  {"ssid": "", "rssi": -66, "auth": 3, "channel": 6},
+  {"ssid": "Hearth", "rssi": -48, "auth": 3, "channel": 6},
+  {"ssid": "Nebula-2G", "rssi": -79, "auth": 4, "channel": 11},
+  {"ssid": "DIRECT-7f-Printer", "rssi": -63, "auth": 3, "channel": 6},
+  {"ssid": "Observatory WPA3", "rssi": -85, "auth": 6, "channel": 3}
+]

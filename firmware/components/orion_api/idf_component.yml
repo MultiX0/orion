@@ -1,0 +1,5 @@
+## Managed dependency for discovery. Pinned like the screen's manifest so every
+## checkout resolves the same tree.
+dependencies:
+  idf: ">=5.5"
+  espressif/mdns: "1.13.1"

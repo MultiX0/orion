@@ -1,0 +1,22 @@
+{
+  "type": "micro",
+  "wake_word": "Orion",
+  "author": "MultiX0",
+  "website": "https://github.com/MultiX0",
+  "model": "orion_v0.tflite",
+  "trained_languages": [
+    "ar",
+    "en"
+  ],
+  "version": 2,
+  "micro": {
+    "probability_cutoff": 0.9,
+    "sliding_window_size": 5,
+    "feature_step_size": 10,
+    "tensor_arena_size": 34816,
+    "minimum_esphome_version": "2024.7.0"
+  },
+  "evaluation": {
+    "note": "step 4000 checkpoint, demo grade. Holdout at 0.90: FRR 4.9%, 34 of 192 confusables fire. Replaced when the retrained model lands."
+  }
+}

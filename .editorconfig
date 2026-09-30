@@ -1,0 +1,53 @@
+root = true
+
+# Files are stored with LF line endings in git.
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# dart format decides the rest; it wraps at 80.
+[*.dart]
+indent_size = 2
+max_line_length = 80
+
+[*.{yaml,yml,json,arb}]
+indent_size = 2
+
+# Firmware: 4 spaces, function braces on their own line.
+[*.{c,h,cpp,hpp}]
+indent_size = 4
+
+[{CMakeLists.txt,*.cmake}]
+indent_size = 4
+
+[*.{py,ps1,psm1}]
+indent_size = 4
+
+[*.{kt,kts,gradle,swift}]
+indent_size = 4
+
+[*.xml]
+indent_size = 4
+
+# Xcode writes these with tabs.
+[*.{plist,pbxproj,xcconfig}]
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false
+
+[{sdkconfig.defaults,partitions.csv}]
+indent_size = unset
+
+# Binary and generated files are never touched.
+[*.{bin,tflite,png,jpg,wav,mp3,ttf,otf,stl,3mf,blend}]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset

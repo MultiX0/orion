@@ -1,0 +1,7 @@
+C:\Users\alex\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Slack.lnk
+C:\Users\alex\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Spotify.lnk
+C:\Users\alex\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Visual Studio Code\Visual Studio Code.lnk
+C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Notepad.lnk
+C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Steam\Steam.lnk
+C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Steam\Uninstall Steam.lnk
+C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Blender\Blender 4.2.lnk

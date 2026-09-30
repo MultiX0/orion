@@ -1,0 +1,6 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- The Orion mark from brand/assets/logo.svg, reduced for the 240 px screen.
+     Same four point star, coordinates snapped to a 64 grid so it rasterises
+     clean at 48 to 64 px. Only the geometry is here; colour is applied at runtime. -->
+<path d="M32 1L38.5 25.5L63 32L38.5 38.5L32 63L25.5 38.5L1 32L25.5 25.5Z" fill="white"/>
+</svg>

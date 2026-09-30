@@ -1,0 +1,215 @@
+== front_bezel  (print copy P_front_bezel, 25118 faces)
+   Non-manifold Edges     0
+   Bad Contiguous Edges   0
+   Intersect Faces        2
+   Shells                 1
+   Zero Faces             0
+   Zero Edges             0
+   Non-flat Faces         46
+   Thin Faces             5157
+   Sharp Edges            11
+   Overhang Faces         7143
+   overhang>45 off bed    4549 faces, 169.01 mm2
+   flat ceilings          20, widest span 8.48 mm (limit 10)
+   thin cluster    4 faces  board x   -3.0..  -0.1 y   20.1..  22.9 z    6.8..   7.6
+   thin cluster    2 faces  board x   -3.4..  -1.5 y   48.7..  50.0 z    6.8..   7.2
+   thin cluster  687 faces  board x    2.8..  10.5 y   -4.8..  -2.1 z    7.8..   8.4
+   thin cluster    1 faces  board x    8.4..   8.4 y    1.7..   1.7 z    8.4..   8.4
+   thin cluster    1 faces  board x   19.3..  19.3 y    2.3..   2.3 z    8.4..   8.4
+   thin cluster   65 faces  board x   -1.3..   1.1 y   23.3..  29.1 z    6.8..   8.0
+   thin cluster   20 faces  board x    8.8..  12.5 y   24.0..  26.7 z    5.5..   8.1
+   thin cluster   14 faces  board x   15.9..  19.7 y   24.3..  26.9 z    5.5..   7.9
+   thin cluster   55 faces  board x   26.8..  28.9 y   21.3..  27.9 z    6.8..   8.0
+   thin cluster   67 faces  board x   -1.5..   0.9 y   54.9..  58.6 z    6.8..   8.0
+   thin cluster    1 faces  board x   19.2..  19.2 y   58.6..  58.6 z    6.8..   6.8
+   thin cluster    1 faces  board x    9.7..   9.7 y   60.2..  60.2 z    6.8..   6.8
+   thin cluster   66 faces  board x   27.1..  30.0 y   55.0..  61.8 z    6.3..   8.0
+   thin cluster    3 faces  board x   -1.9..  -1.3 y   29.2..  31.1 z    6.8..   7.7
+   thin cluster    1 faces  board x   -1.3..  -1.3 y   16.7..  16.7 z    6.8..   6.8
+   thin cluster    2 faces  board x   29.5..  29.9 y   37.9..  39.6 z    6.8..   7.9
+   thin cluster   17 faces  board x   28.8..  29.5 y   27.8..  29.1 z    6.8..   8.0
+   thin cluster    2 faces  board x   29.5..  29.5 y   20.1..  20.2 z    6.8..   6.8
+   thin cluster    1 faces  board x   29.3..  29.3 y   16.1..  16.1 z    6.8..   6.8
+   thin cluster  670 faces  board x   11.9..  16.1 y   23.1..  26.9 z    3.0..   7.9
+   thin cluster   73 faces  board x   -2.6..  -1.8 y   81.7..  82.5 z    6.3..   6.8
+   thin cluster   73 faces  board x   30.1..  30.7 y   81.6..  82.4 z    6.3..   6.8
+   thin cluster 1635 faces  board x   12.3..  16.1 y   22.0..  25.8 z    2.1..   5.7
+   thin cluster   55 faces  board x   11.9..  12.6 y   22.5..  25.1 z    3.0..   5.5
+   thin cluster    1 faces  board x   -1.5..  -1.5 y   37.9..  37.9 z    7.9..   7.9
+   thin cluster    1 faces  board x   -1.7..  -1.7 y   46.3..  46.3 z    8.1..   8.1
+   thin cluster    1 faces  board x   29.3..  29.3 y   54.9..  54.9 z    7.7..   7.7
+   thin cluster  457 faces  board x   21.7..  25.9 y   -3.9..  -2.2 z    8.1..   8.2
+   thin cluster  446 faces  board x   17.9..  21.9 y   -3.9..  -2.6 z    7.8..   8.3
+   thin cluster  501 faces  board x   13.3..  18.1 y   -4.0..  -2.1 z    8.1..   8.2
+   thin cluster  231 faces  board x   10.5..  13.4 y   -3.9..  -2.1 z    8.1..   8.2
+   thin cluster    3 faces  board x    2.1..   2.5 y   -4.0..  -3.5 z    8.1..   8.2
+== rear_shell  (print copy P_rear_shell, 25560 faces)
+   Non-manifold Edges     0
+   Bad Contiguous Edges   0
+   Intersect Faces        8
+   Shells                 1
+   Zero Faces             0
+   Zero Edges             0
+   Non-flat Faces         11
+   Thin Faces             3283
+   Sharp Edges            0
+   Overhang Faces         7729
+   overhang>45 off bed    5134 faces, 288.95 mm2
+   flat ceilings          21, widest span 7.48 mm (limit 10)
+   thin cluster  410 faces  board x   -0.1..   4.1 y   16.9..  21.1 z   -6.9..  -3.2
+   thin cluster  128 faces  board x   -0.1..   4.0 y   16.9..  20.0 z  -10.3..  -6.5
+   thin cluster  178 faces  board x    3.8..  10.0 y   81.3..  83.3 z   -2.9..   2.4
+   thin cluster  131 faces  board x    5.2..   6.6 y   81.7..  81.8 z   -9.1..  -5.2
+   thin cluster  320 faces  board x    5.7..  13.1 y    4.8..   9.5 z  -11.7.. -11.6
+   thin cluster  251 faces  board x   12.8..  19.1 y    5.7..  10.6 z  -11.9.. -11.6
+   thin cluster   50 faces  board x    0.8..   4.4 y   17.3..  21.2 z  -10.3..  -9.5
+   thin cluster   22 faces  board x   20.6..  25.3 y    7.0..  11.4 z  -12.0.. -10.0
+   thin cluster   47 faces  board x   15.6..  19.5 y    4.7..   6.1 z  -11.7.. -11.6
+   thin cluster    1 faces  board x    2.9..   2.9 y   80.7..  80.7 z    3.5..   3.5
+   thin cluster   72 faces  board x   13.6..  18.7 y   81.8..  83.3 z   -0.0..   1.1
+   thin cluster   80 faces  board x    4.0..   6.0 y    5.0..   9.2 z  -11.7.. -11.6
+   thin cluster   94 faces  board x   19.2..  22.4 y   81.7..  83.3 z   -5.2..   0.3
+   thin cluster  399 faces  board x   23.7..  28.1 y   63.8..  68.2 z   -6.9..  -3.3
+   thin cluster  105 faces  board x   23.7..  26.2 y   63.8..  68.2 z   -6.9..  -6.7
+   thin cluster   25 faces  board x   -0.8..   3.6 y   12.0..  13.2 z  -10.0.. -10.0
+   thin cluster    5 faces  board x    3.6..   4.0 y   12.8..  13.3 z  -10.0.. -10.0
+   thin cluster   19 faces  board x    2.1..   4.4 y   21.0..  21.8 z  -10.0..  -9.5
+   thin cluster   25 faces  board x   24.0..  28.3 y   10.7..  15.4 z  -10.3.. -10.0
+   thin cluster    6 faces  board x    1.9..   3.7 y   25.7..  26.6 z  -10.0.. -10.0
+   thin cluster   13 faces  board x   28.4..  28.8 y   11.0..  12.0 z  -10.0.. -10.0
+   thin cluster  141 faces  board x   23.6..  27.8 y   16.9..  20.4 z  -10.3..  -6.7
+   thin cluster    3 faces  board x   24.1..  25.4 y   24.9..  26.5 z  -10.0.. -10.0
+   thin cluster    4 faces  board x   -0.1..   0.0 y   34.6..  34.9 z  -10.0.. -10.0
+   thin cluster    1 faces  board x   25.5..  25.5 y   40.6..  40.6 z  -10.0.. -10.0
+   thin cluster    4 faces  board x   27.9..  28.0 y   33.4..  33.6 z  -10.0.. -10.0
+   thin cluster    1 faces  board x   -0.9..  -0.9 y   28.8..  28.8 z  -10.0.. -10.0
+   thin cluster    1 faces  board x   28.8..  28.8 y   28.1..  28.1 z  -10.0.. -10.0
+   thin cluster   30 faces  board x    9.6..  13.2 y   81.7..  83.3 z   -5.1..   0.3
+   thin cluster    1 faces  board x    9.6..   9.6 y   83.3..  83.3 z   -5.1..  -5.1
+   thin cluster    2 faces  board x   11.3..  11.4 y   81.7..  81.7 z   -9.1..  -8.3
+   thin cluster    2 faces  board x   16.2..  16.3 y   81.8..  81.8 z   -9.1..  -8.3
+   thin cluster  130 faces  board x   21.0..  22.4 y   81.7..  81.8 z   -9.1..  -5.4
+   thin cluster    1 faces  board x   11.0..  11.0 y   12.3..  12.3 z   -9.5..  -9.5
+   thin cluster    8 faces  board x   17.0..  17.3 y   16.9..  20.1 z   -9.5..  -9.5
+   thin cluster    5 faces  board x   10.6..  10.7 y   17.7..  18.5 z   -9.5..  -9.5
+   thin cluster    1 faces  board x   10.7..  10.7 y   22.4..  22.4 z   -9.5..  -9.5
+   thin cluster   64 faces  board x   21.4..  22.4 y   81.7..  81.8 z    0.1..   1.1
+   thin cluster    1 faces  board x   11.3..  11.3 y   81.7..  81.7 z    1.1..   1.1
+   thin cluster  297 faces  board x   24.2..  28.0 y   14.9..  18.8 z  -10.3..  -3.3
+   thin cluster  120 faces  board x   23.8..  26.8 y   14.9..  19.1 z   -3.4..  -3.2
+   thin cluster   29 faces  board x   23.8..  24.2 y   15.8..  18.1 z  -10.3..  -6.3
+   thin cluster   25 faces  board x   24.2..  26.4 y   14.9..  15.8 z   -3.3..  -3.3
+   thin cluster   17 faces  board x   24.2..  27.1 y   15.1..  16.4 z  -10.3.. -10.3
+   thin cluster   14 faces  board x   14.6..  14.7 y    4.7..   5.3 z  -11.7.. -11.6
+== button_plunger  (print copy P_button_plunger, 7234 faces)
+   Non-manifold Edges     0
+   Bad Contiguous Edges   0
+   Intersect Faces        0
+   Shells                 1
+   Zero Faces             0
+   Zero Edges             0
+   Non-flat Faces         0
+   Thin Faces             394
+   Sharp Edges            0
+   Overhang Faces         130
+   overhang>45 off bed    0 faces, 0.00 mm2
+   flat ceilings          0, widest span 0.00 mm (limit 10)
+   thin cluster  101 faces  board x   10.1..  14.7 y   11.4..  15.9 z    6.3..   7.2
+   thin cluster   97 faces  board x   10.1..  13.3 y   16.5..  19.1 z    6.3..   7.2
+   thin cluster   97 faces  board x   16.3..  17.9 y   11.4..  14.6 z    6.3..   7.2
+   thin cluster   99 faces  board x   15.0..  17.9 y   16.2..  19.1 z    6.3..   7.2
+== stand  (print copy P_stand, 12492 faces)
+   Non-manifold Edges     0
+   Bad Contiguous Edges   0
+   Intersect Faces        0
+   Shells                 1
+   Zero Faces             0
+   Zero Edges             0
+   Non-flat Faces         0
+   Thin Faces             95
+   Sharp Edges            0
+   Overhang Faces         1346
+   overhang>45 off bed    554 faces, 444.80 mm2
+   flat ceilings          5, widest span 8.40 mm (limit 10)
+   thin cluster   36 faces  board x   -5.1..  -2.0 y  -10.6..  -7.5 z    7.3..  12.6
+   thin cluster    2 faces  board x    5.7..   7.3 y  -24.1.. -23.9 z  -16.4.. -15.7
+   thin cluster   36 faces  board x   30.2..  33.0 y  -10.5..  -7.5 z    7.0..   9.8
+   thin cluster    2 faces  board x    7.9..   9.5 y  -20.7.. -20.7 z  -11.2.. -10.6
+   thin cluster    4 faces  board x   30.9..  32.1 y   -8.5..  -8.1 z   10.0..  12.2
+   thin cluster    7 faces  board x   21.0..  24.0 y  -24.3.. -23.9 z  -16.2.. -14.6
+   thin cluster    7 faces  board x   18.8..  21.2 y  -21.0.. -20.7 z  -11.1..  -9.0
+   thin cluster    1 faces  board x   20.0..  20.0 y  -16.3.. -16.3 z  -10.6.. -10.6
+== dock  (print copy P_dock, 13792 faces)
+   Non-manifold Edges     0
+   Bad Contiguous Edges   0
+   Intersect Faces        0
+   Shells                 1
+   Zero Faces             0
+   Zero Edges             0
+   Non-flat Faces         0
+   Thin Faces             152
+   Sharp Edges            0
+   Overhang Faces         1530
+   overhang>45 off bed    878 faces, 668.31 mm2
+   flat ceilings          105, widest span 8.40 mm (limit 10)
+   thin cluster   27 faces  board x   11.4..  16.0 y  -29.2.. -24.9 z    0.0..   1.8
+   thin cluster   33 faces  board x   -5.0..  -2.3 y  -10.6..  -7.5 z    6.8..  10.8
+   thin cluster    3 faces  board x   15.5..  16.3 y  -28.8.. -25.8 z    0.4..   1.2
+   thin cluster   20 faces  board x   11.3..  13.8 y  -27.9.. -25.1 z   -6.0..  -4.7
+   thin cluster    2 faces  board x    8.7..   9.7 y   -9.2..  -8.3 z    8.7..  10.9
+   thin cluster   44 faces  board x   30.0..  32.9 y  -10.5..  -7.5 z    6.9..  10.6
+   thin cluster    1 faces  board x   31.0..  31.0 y   -8.5..  -8.5 z   12.1..  12.1
+   thin cluster    1 faces  board x   14.0..  14.0 y  -23.8.. -23.8 z  -12.0.. -12.0
+   thin cluster   21 faces  board x   14.1..  16.5 y  -27.6.. -25.1 z   -6.0..  -5.2
+== inlay_star_front  (print copy P_inlay_star_front, 28 faces)
+   Non-manifold Edges     0
+   Bad Contiguous Edges   0
+   Intersect Faces        0
+   Shells                 1
+   Zero Faces             0
+   Zero Edges             0
+   Non-flat Faces         0
+   Thin Faces             20
+   Sharp Edges            0
+   Overhang Faces         6
+   overhang>45 off bed    0 faces, 0.00 mm2
+   flat ceilings          0, widest span 0.00 mm (limit 10)
+== inlay_tagline  (print copy P_inlay_tagline, 6536 faces)
+   Non-manifold Edges     0
+   Bad Contiguous Edges   0
+   Intersect Faces        0
+   Shells                 17
+   Zero Faces             0
+   Zero Edges             0
+   Non-flat Faces         0
+   Thin Faces             6472
+   Sharp Edges            0
+   Overhang Faces         1626
+   overhang>45 off bed    0 faces, 0.00 mm2
+   flat ceilings          0, widest span 0.00 mm (limit 10)
+== inlay_star_back  (print copy P_inlay_star_back, 28 faces)
+   Non-manifold Edges     0
+   Bad Contiguous Edges   0
+   Intersect Faces        0
+   Shells                 1
+   Zero Faces             0
+   Zero Edges             0
+   Non-flat Faces         0
+   Thin Faces             20
+   Sharp Edges            0
+   Overhang Faces         6
+   overhang>45 off bed    0 faces, 0.00 mm2
+   flat ceilings          0, widest span 0.00 mm (limit 10)
+== inlay_wordmark  (print copy P_inlay_wordmark, 3096 faces)
+   Non-manifold Edges     0
+   Bad Contiguous Edges   0
+   Intersect Faces        0
+   Shells                 6
+   Zero Faces             0
+   Zero Edges             0
+   Non-flat Faces         0
+   Thin Faces             2706
+   Sharp Edges            0
+   Overhang Faces         770
+   overhang>45 off bed    0 faces, 0.00 mm2
+   flat ceilings          0, widest span 0.00 mm (limit 10)

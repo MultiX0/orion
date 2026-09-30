@@ -1,0 +1,7 @@
+## Managed dependencies for the screen. Pinned so every checkout resolves the
+## same tree. Bump on purpose, not by accident.
+dependencies:
+  idf: ">=5.5"
+  lvgl/lvgl: "9.4.0"
+  espressif/esp_lvgl_port: "2.9.0"
+  espressif/esp_lcd_touch_cst816s: "1.1.2"

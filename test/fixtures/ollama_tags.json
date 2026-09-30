@@ -1,0 +1,26 @@
+{
+  "models": [
+    {
+      "name": "llama3.2:latest",
+      "model": "llama3.2:latest",
+      "modified_at": "2026-08-14T09:12:41.7Z",
+      "size": 2019393189,
+      "details": {
+        "family": "llama",
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "llava:7b",
+      "model": "llava:7b",
+      "modified_at": "2026-07-02T18:31:05.2Z",
+      "size": 4733363377,
+      "details": {
+        "family": "llava",
+        "parameter_size": "7B",
+        "quantization_level": "Q4_0"
+      }
+    }
+  ]
+}

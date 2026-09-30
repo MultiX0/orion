@@ -1,0 +1,34 @@
+# Pinned to what actually trained the shipped model, on python 3.11.16 in
+# WSL2 Ubuntu 26.04. Install with uv:
+#
+#   uv venv --python 3.11 ~/orion_ww/.venv
+#   uv pip install --python ~/orion_ww/.venv/bin/python -r requirements.txt
+#   uv pip install --python ~/orion_ww/.venv/bin/python --no-deps -e work/mww
+#
+# Notes that cost time to find:
+# - datasets must stay under 4. Version 4 decodes audio through torchcodec,
+#   which has no usable wheel here, and microwakeword.audio.clips imports it.
+# - tensorflow is pinned as the plain CPU wheel. The shipped model was trained
+#   with the GPU set on top of it, installed afterwards with
+#     uv pip install --no-cache "tensorflow[and-cuda]==2.20.0"
+#   which adds 12 nvidia wheels (cuda 12.9, cudnn 9.26) and 4.2 GB on disk.
+#   Only worth it when the disk has the room; see the journal.
+# - piper-tts is the ONNX runtime, not the torch sample generator.
+
+numpy==2.4.6
+tensorflow==2.20.0
+ai-edge-litert==2.2.0
+pymicro-features==2.0.2
+audiomentations==0.43.1
+mmap-ninja==0.9.0
+webrtcvad-wheels==2.0.14
+datasets==3.6.0
+librosa==0.11.0
+soundfile==0.14.0
+scipy==1.17.1
+pyyaml==6.0.3
+tqdm==4.70.1
+requests==2.34.2
+piper-tts==1.8.0
+onnxruntime==1.30.0
+audio-metadata @ git+https://github.com/whatsnowplaying/audio-metadata@d4ebb238e6a401bb1a5aaaac60c9e2b3cb30929f

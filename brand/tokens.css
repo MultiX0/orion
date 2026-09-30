@@ -1,0 +1,170 @@
+/* ═══════════════════════════════════════════════════════════
+   ORION — Design Tokens
+   Dark-only system. Import after ./fonts/fonts.css
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Surfaces ───────────────────────────────────────── */
+  --bg-primary: #09090b;
+  --bg-secondary: #0f0f12;
+  --bg-card: #111115;
+  --bg-card-elevated: #16161c;
+  --bg-highlight: #1a2535;
+
+  /* ── Borders ────────────────────────────────────────── */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-soft: rgba(255, 255, 255, 0.10);
+  --border-cyan: rgba(160, 210, 230, 0.20);
+
+  /* ── Text ───────────────────────────────────────────── */
+  --text-white: #f4f4f5;
+  --text-muted: #71717a;
+  --text-faint: #3f3f46;
+  --text-cyan: #a8ccd8;
+  --text-cyan-soft: #7cb8ce;
+
+  /* ── Accent, as rgb triplets for alpha composition ──── */
+  --accent-rgb: 168, 204, 216;      /* #a8ccd8 */
+  --accent-glow-rgb: 160, 210, 230; /* cooler glow cyan */
+
+  /* ── Type families ──────────────────────────────────── */
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-body: 'Source Serif 4', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'DM Mono', 'Courier New', monospace;
+
+  /* ── Fluid display sizes ────────────────────────────── */
+  --text-monumental: clamp(120px, 25vw, 360px);
+  --text-hero: clamp(32px, 3.6vw, 58px);
+  --text-section: clamp(28px, 3vw, 44px);
+  --text-lead: clamp(14px, 1.1vw, 16px);
+
+  /* ── Tracking ───────────────────────────────────────── */
+  --tracking-monumental: -0.05em;
+  --tracking-display: -0.025em;
+  --tracking-tight: -0.02em;
+  --tracking-ui: 0.02em;
+  --tracking-label: 0.15em;
+  --tracking-eyebrow: 0.18em;
+  --tracking-micro: 0.22em;
+  --tracking-micro-wide: 0.28em;
+
+  /* ── Spacing ────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-15: 60px;
+  --space-20: 80px;
+  --space-25: 100px;
+  --space-30: 120px;
+
+  /* ── Containers ─────────────────────────────────────── */
+  --container-wide: 1400px;
+  --container-hero: 1360px;
+  --container: 1200px;
+  --container-narrow: 968px;
+  --container-article: 800px;
+  --container-measure: 600px;
+  --container-form: 440px;
+
+  /* ── Radii ──────────────────────────────────────────── */
+  --radius-xs: 2px;
+  --radius-sm: 8px;
+  --radius-btn: 10px;
+  --radius-card: 12px;
+  --radius-lg: 14px;
+  --radius-full: 50%;
+
+  /* ── Motion ─────────────────────────────────────────── */
+  --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-fast: 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-med: 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-hover: 300ms;
+  --duration-reveal: 1400ms;
+  --duration-fade: 1800ms;
+
+  /* ── Glow ───────────────────────────────────────────── */
+  --glow-sm: 0 0 8px rgba(168, 204, 216, 0.5);
+  --glow-md: 0 0 16px rgba(168, 204, 216, 0.8);
+  --glow-hover: 0 0 24px rgba(168, 204, 216, 0.1);
+
+  /* ── Z-index ────────────────────────────────────────── */
+  --z-ambient: 0;
+  --z-content: 1;
+  --z-raised: 5;
+  --z-nav: 50;
+  --z-modal: 100;
+}
+
+/* ── Base reset ───────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background-color: var(--bg-primary);
+  color: var(--text-white);
+  font-family: var(--font-body);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.05) transparent;
+}
+
+body {
+  background-color: var(--bg-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* ── Keyframes ────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes dotPulse {
+  0%, 100% { opacity: 1;   box-shadow: var(--glow-sm); }
+  50%      { opacity: 0.5; box-shadow: var(--glow-md); }
+}
+
+.animate-fade-up         { animation: fadeInUp 0.7s var(--transition-med) both; }
+.animate-fade-up-delay-1 { animation: fadeInUp 0.7s 0.10s var(--ease-ui) both; }
+.animate-fade-up-delay-2 { animation: fadeInUp 0.7s 0.20s var(--ease-ui) both; }
+.animate-fade-up-delay-3 { animation: fadeInUp 0.7s 0.35s var(--ease-ui) both; }
+.animate-fade-up-delay-4 { animation: fadeInUp 0.7s 0.50s var(--ease-ui) both; }
+.animate-scale-in        { animation: scaleIn 0.8s 0.15s var(--ease-ui) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

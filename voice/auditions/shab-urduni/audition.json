@@ -1,0 +1,75 @@
+{
+  "voice_id": "ec69015cc6f04316a1db3c83279cca0e",
+  "lines": [
+    {
+      "line": "أهلين! أنا أوريون، شو بتحب أساعدك فيه اليوم؟",
+      "file": "line1.wav",
+      "ttfb_ms": 739.3832000088878,
+      "total_ms": 2062.1467000164557,
+      "seconds": 3.015625,
+      "rms": 10263,
+      "peak": 30247,
+      "clipped": 0,
+      "silence_ratio": 0.082,
+      "heard": "هلين أنا وريون، شو بتحب أساعدك فيه اليوم؟",
+      "cer": 0.056,
+      "english_kept": "-"
+    },
+    {
+      "line": "تمام، لحظة خليني أشوف.",
+      "file": "line2.wav",
+      "ttfb_ms": 1390.6805000151508,
+      "total_ms": 2458.5000000079162,
+      "seconds": 1.9475,
+      "rms": 7952,
+      "peak": 28864,
+      "clipped": 0,
+      "silence_ratio": 0.2,
+      "heard": "تننن  لحظة خلينا نشوف",
+      "cer": 0.333,
+      "english_kept": "-"
+    },
+    {
+      "line": "الجو اليوم بعمّان حلو، حوالي خمسة وعشرين درجة.",
+      "file": "line3.wav",
+      "ttfb_ms": 757.6218000031076,
+      "total_ms": 2096.559800003888,
+      "seconds": 2.9691875,
+      "rms": 11409,
+      "peak": 30443,
+      "clipped": 0,
+      "silence_ratio": 0.065,
+      "heard": "الجو اليوم بعمان حلو حوالي 25 درجة",
+      "cer": 0.297,
+      "english_kept": "-"
+    },
+    {
+      "line": "فتحتلك الـ Spotify على الـ PC.",
+      "file": "line4.wav",
+      "ttfb_ms": 994.3019000056665,
+      "total_ms": 1963.0133000027854,
+      "seconds": 2.040375,
+      "rms": 8356,
+      "peak": 29443,
+      "clipped": 0,
+      "silence_ratio": 0.147,
+      "heard": "فتحت لك ال Spotify على ال PC",
+      "cer": 0.0,
+      "english_kept": "2/2"
+    },
+    {
+      "line": "ما سمعتك منيح، ممكن تعيدها؟",
+      "file": "line5.wav",
+      "ttfb_ms": 785.5514999828301,
+      "total_ms": 1638.0532999755815,
+      "seconds": 2.1796875,
+      "rms": 10274,
+      "peak": 29841,
+      "clipped": 0,
+      "silence_ratio": 0.127,
+      "heard": "ما سمعتك منيح ممكن تعيدها؟",
+      "cer": 0.043,
+      "english_kept": "-"
+    }
+  ]
+}

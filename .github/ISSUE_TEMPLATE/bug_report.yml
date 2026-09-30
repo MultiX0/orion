@@ -1,0 +1,112 @@
+name: Bug report
+description: Something on the board, in the app or with the case does not work as it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Search open and closed issues first.
+        For a security problem, do not use this form: see SECURITY.md.
+        Remove API keys, pairing tokens, Wi-Fi passwords and personal details from everything you paste.
+
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part
+      options:
+        - Firmware (the board)
+        - App on Android
+        - App on iOS
+        - App on Windows
+        - PC control (harness, port 7331)
+        - Wake word
+        - Case
+        - Docs
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Power the board from a charger
+        2. Say "Orion", then ask for the time
+        3. The board shows the star but never answers
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often
+      options:
+        - Every time
+        - Often
+        - Once or rarely
+    validations:
+      required: true
+
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version
+      description: Shown in the app, or in GET /api/info from the board. Write "not used" if this is only about the app.
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: app
+    attributes:
+      label: App version and platform
+      description: App version, and the OS with its version.
+      placeholder: Android 15, Pixel 8
+    validations:
+      required: false
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup
+      description: Language model provider and model, speech provider, PC control mode, how the board is powered (charger or power bank). Never the keys.
+      placeholder: |
+        DeepInfra, gemma-4-31B-it-turbo, Fish Audio for speech, PC control ask me first, phone charger
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The board's serial console around the problem, the app's output, or the PC control log from ~/Orion/logs. Check it for keys and tokens before you paste.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, a short video, Wi-Fi distance, room noise for voice problems.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send
+      options:
+        - label: I searched the existing issues.
+          required: true
+        - label: I removed keys, tokens, passwords and personal details from this report.
+          required: true

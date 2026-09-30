@@ -1,0 +1,28 @@
+{
+  "type": "micro",
+  "wake_word": "Orion",
+  "author": "MultiX0",
+  "website": "https://github.com/MultiX0",
+  "model": "orion_ft.tflite",
+  "trained_languages": [
+    "ar",
+    "en"
+  ],
+  "version": 2,
+  "micro": {
+    "probability_cutoff": 0.95,
+    "sliding_window_size": 5,
+    "feature_step_size": 10,
+    "tensor_arena_size": 34816,
+    "minimum_esphome_version": "2024.7.0"
+  },
+  "evaluation": {
+    "source": "orion_ft step 500: stage two fine-tune (lr 0.0002, SpecAugment) from the orion run's step 4000 weights",
+    "cutoff_source": "holdout sweep at a fixed cutoff, see models/TEST_CLIPS.md",
+    "holdout_positive_clips": 204,
+    "holdout_negative_clips": 192,
+    "holdout_false_rejection_rate": 0.049,
+    "holdout_false_accepts": 22,
+    "false_accepts_per_hour": "not measured for this checkpoint"
+  }
+}

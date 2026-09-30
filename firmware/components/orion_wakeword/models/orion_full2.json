@@ -1,0 +1,32 @@
+{
+  "type": "micro",
+  "wake_word": "Orion",
+  "author": "MultiX0",
+  "website": "https://github.com/MultiX0",
+  "model": "orion_full2.tflite",
+  "trained_languages": [
+    "ar",
+    "en"
+  ],
+  "version": 2,
+  "micro": {
+    "probability_cutoff": 0.95,
+    "sliding_window_size": 5,
+    "feature_step_size": 10,
+    "tensor_arena_size": 34816,
+    "minimum_esphome_version": "2024.7.0"
+  },
+  "evaluation": {
+    "source": "orion_full2 step 9000: full retrain adding no_speech, speech, dinner_party, music and Fish negatives, positives sampled 4x, lr 0.0002 phase",
+    "cutoff_source": "fixed cutoff sweep 0.90 to 0.99 against the previous model (now orion_ft) on the same sets",
+    "holdout_positive_clips": 204,
+    "holdout_negative_clips": 192,
+    "holdout_false_rejection_rate": 0.152,
+    "holdout_false_accepts": 12,
+    "augmented_false_rejection_rate": 0.279,
+    "ambient_false_accepts_per_hour": 2.81,
+    "unseen_noise_detections_per_hour": 18.8,
+    "over_the_air": "9 of 12 held-out clips from laptop speakers; 1 false wake in a 5 minute noise and confusable reel",
+    "previous_model_same_tests": "holdout frr 0.074, fa 17; augmented frr 0.181; ambient 5.81/h; unseen noise 87.1/h"
+  }
+}

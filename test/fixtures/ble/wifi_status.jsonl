@@ -1,0 +1,9 @@
+{"report": {"state": 1}, "expect": "connecting"}
+{"report": {"state": 2, "attempts_remaining": 3}, "expect": "connecting"}
+{"report": {"state": 2, "fail_reason": 0, "attempts_remaining": 0}, "expect": "failed:wrongPassword"}
+{"report": {"state": 0, "ip": "192.168.1.40"}, "expect": "connected:192.168.1.40"}
+{"report": {"state": 0}, "expect": "connecting"}
+{"report": {"state": 3, "fail_reason": 0}, "expect": "failed:wrongPassword"}
+{"report": {"state": 3, "fail_reason": 1}, "expect": "failed:networkNotFound"}
+{"report": {"state": 3}, "expect": "failed:networkNotFound"}
+{"report": {"state": 9}, "expect": "connecting"}

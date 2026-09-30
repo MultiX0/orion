@@ -1,0 +1,31 @@
+{
+  "type": "micro",
+  "wake_word": "Orion",
+  "author": "Orion project",
+  "website": "https://github.com/MultiX0",
+  "model": "orion_ft4.tflite",
+  "trained_languages": [
+    "ar",
+    "en"
+  ],
+  "version": 2,
+  "micro": {
+    "probability_cutoff": 0.88,
+    "sliding_window_size": 5,
+    "feature_step_size": 10,
+    "tensor_arena_size": 34816,
+    "minimum_esphome_version": "2024.7.0"
+  },
+  "evaluation": {
+    "source": "orion_ft4 step 2000: stage two fine-tune from the orion run's step 4000 weights with speech 10, no_speech 5, fish_negative 4, fish_confusable 2 added",
+    "cutoff_source": "holdout sweep at a fixed cutoff, see models/TEST_CLIPS.md",
+    "holdout_positive_clips": 204,
+    "holdout_negative_clips": 192,
+    "holdout_false_rejection_rate": 0.1275,
+    "holdout_false_accepts": 14,
+    "ambient_false_accepts_per_hour": 1.312,
+    "ambient_source": "dinner_party_eval testing_ambient, 5.33 h, scripts/ambient_faph.py",
+    "unseen_noise_detections_per_hour": 33.61,
+    "noise_source": "fsd50k_no_speech prefix never trained on, 2.77 h, scripts/silence_test.py"
+  }
+}

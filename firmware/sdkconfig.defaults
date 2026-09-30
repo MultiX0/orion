@@ -1,0 +1,132 @@
+CONFIG_IDF_TARGET="esp32s3"
+
+# Flash: 16 MB, QIO at 80 MHz, matching LilyGO's own config
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# PSRAM. This board has an external QUAD psram chip, not in-package octal.
+# Octal would steal GPIO 33 to 37, which the LCD and the I2C bus use.
+# See the note at the top of components/board/include/board_pins.h.
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_QUAD=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_USE_MALLOC=y
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+# Anything over 4 KB lands in PSRAM unless the caller asks for internal.
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=4096
+CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=32768
+
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+
+# Console on the native USB port. There is no USB-UART bridge on this board.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+
+# HTTPS always verifies. Never turn this off, not even to test.
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+CONFIG_ESP_TLS_INSECURE=n
+
+# Wi-Fi and lwIP sized for streaming TTS audio in while uploading mic audio out.
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=10
+# The receive window must fit in what the radio can hold. 64 KB offered against
+# 32 dynamic buffers (about 51 KB) let a 24 kHz TTS burst overflow them; the
+# dropped packets cost TCP retransmission backoff, 11 to 18 s of silence mid
+# answer. 64 buffers, in PSRAM through SPIRAM_TRY_ALLOCATE_WIFI_LWIP, and a
+# 32 KB window: still 160 KB/s at a 200 ms round trip, three times the audio.
+CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=64
+CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER_NUM=64
+CONFIG_ESP_WIFI_AMPDU_TX_ENABLED=y
+CONFIG_ESP_WIFI_AMPDU_RX_ENABLED=y
+CONFIG_LWIP_TCP_SND_BUF_DEFAULT=65535
+CONFIG_LWIP_TCP_WND_DEFAULT=32768
+CONFIG_LWIP_TCP_RECVMBOX_SIZE=64
+# Two apps linked (a /ws socket and a keep-alive each), the camera stream,
+# the server's own two, and five cloud connections: 10 was already the edge.
+CONFIG_LWIP_MAX_SOCKETS=16
+
+# TLS handshakes need a deep stack, and so does LVGL rendering.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=4096
+CONFIG_FREERTOS_HZ=1000
+
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=30
+
+# ---------------------------------------------------------------------------
+# LVGL, owned by orion-screen. Arabic is the point, not an option.
+# ---------------------------------------------------------------------------
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_USE_BIDI=y
+CONFIG_LV_USE_ARABIC_PERSIAN_CHARS=y
+CONFIG_LV_DEF_REFR_PERIOD=16
+CONFIG_LV_USE_PERF_MONITOR=n
+# LVGL allocates through orion_ui/ui_mem.c, which asks for PSRAM for every
+# allocation, small ones included. The C library allocator kept everything
+# under 4 KB internal (SPIRAM_MALLOC_ALWAYSINTERNAL), which is most of LVGL.
+CONFIG_LV_USE_CUSTOM_MALLOC=y
+CONFIG_LV_USE_SNAPSHOT=y
+CONFIG_LV_USE_SPAN=y
+CONFIG_LV_USE_TJPGD=y
+# TJpgDec reads an in-memory JPEG through the memfs driver, and silently
+# refuses to decode one without it.
+CONFIG_LV_USE_FS_MEMFS=y
+CONFIG_LV_FS_MEMFS_LETTER=77
+CONFIG_LV_USE_ARC=y
+CONFIG_LV_USE_LABEL=y
+CONFIG_LV_USE_IMAGE=y
+
+# Internal RAM is the scarce thing once every lane runs together: Wi-Fi failed
+# to init with ESP_ERR_NO_MEM on the first integrated boot. TLS handshake and
+# record buffers (about 40 KB per kept-alive socket, and cloud keeps two) and
+# LVGL's heap go to PSRAM. Small LVGL allocations still land internal because
+# SPIRAM_MALLOC_ALWAYSINTERNAL is 4 KB.
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
+
+# With TLS buffers in PSRAM the AES engine needs internal DMA bounce buffers per
+# record, and mid turn it could not get them: "esp-aes: Failed to allocate
+# memory" killed the LLM request right after an ASR upload. Software AES needs
+# no DMA and is fast enough for a few KB of JSON a turn.
+CONFIG_MBEDTLS_HARDWARE_AES=n
+
+# ---------------------------------------------------------------------------
+# Bluetooth LE Wi-Fi setup (orion_prov) and the LAN API (orion_api).
+# NimBLE host with its allocations in PSRAM; the controller's static memory
+# is given back to the heap with esp_bt_mem_release on boots that never
+# use it, and after setup mode ends. Wi-Fi and BLE run together under the
+# software coexistence arbiter while the phone provisions.
+# ---------------------------------------------------------------------------
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_BLUEDROID_ENABLED=n
+CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=y
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
+CONFIG_BT_NIMBLE_50_FEATURE_SUPPORT=n
+CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=6144
+CONFIG_BT_CTRL_BLE_MAX_ACT=3
+# The controller's code otherwise sits in IRAM for the whole run (14.7 KB
+# measured with size-components), which is heap the voice loop needs. From
+# flash it only costs speed during setup mode, where nothing else runs.
+CONFIG_BT_CTRL_RUN_IN_FLASH_ONLY=y
+CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
+# Plain text sessions are never offered; the phone must know the code.
+CONFIG_ESP_PROTOCOMM_SUPPORT_SECURITY_VERSION_0=n
+# After the station gets an IP, BLE stays up this long so the phone can read
+# "connected", then the manager stops itself.
+CONFIG_WIFI_PROV_AUTOSTOP_TIMEOUT=10
+CONFIG_WIFI_PROV_BLE_BONDING=n
+CONFIG_WIFI_PROV_BLE_FORCE_ENCRYPTION=n
+CONFIG_HTTPD_WS_SUPPORT=y
+# 5.5 calls only this after a /ws handshake, not the URI handler: without it
+# no token was ever checked and every link closed at its first ping.
+CONFIG_HTTPD_WS_POST_HANDSHAKE_CB_SUPPORT=y
+# mDNS never touches flash, so its task stack and buffers can live in PSRAM.
+CONFIG_MDNS_TASK_CREATE_FROM_SPIRAM=y
+CONFIG_MDNS_MEMORY_ALLOC_SPIRAM=y
+CONFIG_MDNS_MAX_SERVICES=3

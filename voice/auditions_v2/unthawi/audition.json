@@ -1,0 +1,95 @@
+{
+  "voice_id": "81c63e6a5ff141d38367fcb009c570d6",
+  "model": "s2.1-pro-free",
+  "lines": [
+    {
+      "key": "line1",
+      "line": "مرحباً، أنا أوريون. كيف يمكنني مساعدتك اليوم؟",
+      "lang": "ar",
+      "ttfb_ms": 910,
+      "seconds": 3.76,
+      "peak_dbfs": -0.5,
+      "rms_dbfs": -12.9,
+      "clipped": 0,
+      "heard": "مرحباً أنا أوريون  كيف يمكنني مساعدتك اليوم؟",
+      "cer": 0.027,
+      "name_ok": true
+    },
+    {
+      "key": "line1v",
+      "line": "مرحباً، أنا أُورْيُون. كيف يمكنني مساعدتك اليوم؟",
+      "lang": "ar",
+      "ttfb_ms": 468,
+      "seconds": 3.9,
+      "peak_dbfs": -0.7,
+      "rms_dbfs": -13.7,
+      "clipped": 0,
+      "heard": "مرحباً أنا أوريون  كيف يمكنني مساعدتك اليوم؟",
+      "cer": 0.027,
+      "name_ok": true
+    },
+    {
+      "key": "line2",
+      "line": "لحظة من فضلك، دعني أتحقق من ذلك.",
+      "lang": "ar",
+      "ttfb_ms": 487,
+      "seconds": 2.6,
+      "peak_dbfs": -0.6,
+      "rms_dbfs": -15.4,
+      "clipped": 0,
+      "heard": "لحظة من فضلك دعني أتحقق من ذلك",
+      "cer": 0.04
+    },
+    {
+      "key": "line3",
+      "line": "الطقس في عمّان اليوم معتدل، حوالي خمس وعشرين درجة.",
+      "lang": "ar",
+      "ttfb_ms": 458,
+      "seconds": 3.99,
+      "peak_dbfs": -0.7,
+      "rms_dbfs": -12.6,
+      "clipped": 0,
+      "heard": "الطقس في عمان اليوم معتدل حوالي خمس وعشرين درجة",
+      "cer": 0.025
+    },
+    {
+      "key": "line4",
+      "line": "فتحتُ لك Spotify على الكمبيوتر.",
+      "lang": "ar",
+      "ttfb_ms": 454,
+      "seconds": 2.23,
+      "peak_dbfs": -0.6,
+      "rms_dbfs": -14.6,
+      "clipped": 0,
+      "heard": "فتحت لك سبوتيفاي على الكمبيوتر",
+      "cer": 0.32,
+      "english_kept": "0/1"
+    },
+    {
+      "key": "line5",
+      "line": "عذراً، لم أسمعك جيداً. هل يمكنك الإعادة؟",
+      "lang": "ar",
+      "ttfb_ms": 468,
+      "seconds": 3.9,
+      "peak_dbfs": -0.6,
+      "rms_dbfs": -13.0,
+      "clipped": 0,
+      "heard": "عذرا  لم أسمعك جيدا  هل يمكنك الإعادة؟",
+      "cer": 0.032
+    },
+    {
+      "key": "line6",
+      "line": "Hi, I'm Orion. I opened Spotify on your PC and the Wi-Fi is back.",
+      "lang": "en",
+      "ttfb_ms": 448,
+      "seconds": 5.11,
+      "peak_dbfs": -0.5,
+      "rms_dbfs": -12.6,
+      "clipped": 0,
+      "heard": "Hi, I'm Orion.  I opened Spotify on your PC and the Wi-Fi is back.",
+      "cer": 0.0,
+      "english_kept": "13/13",
+      "name_ok": true
+    }
+  ]
+}
