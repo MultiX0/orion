@@ -99,13 +99,13 @@ The repository is https://github.com/MultiX0/orion and the project website is ht
 | `orion-firmware-full.bin` | `https://github.com/MultiX0/orion/releases/latest/download/orion-firmware-full.bin` |
 | `orion-firmware-full.bin.sha256` | the same address with `.sha256` added |
 
-The README and the website also send people to `releases/latest` for the app. So the release marked **Latest** must carry the newest full image with its `.sha256`, the three flash scripts and the newest app builds. GitHub picks Latest by date and version unless told, and both tags usually sit on the same commit, so always say it: `--latest` on the release that should be Latest, `--latest=false` on the other. A later firmware-only release is marked Latest and carries the current app builds too; a later app-only release carries the current full image. Keep the repository public, or none of these addresses work for anyone else.
+The README and the website also send people to `releases/latest` for the app and to `releases/latest/download/orion_case.blend` for the case model; the website pins its app download buttons to `releases/download/v<version>/`, so bump the version in the landing page's `components/sections/closing/links.ts` with each app release. So the release marked **Latest** must carry the newest full image with its `.sha256`, the three flash scripts, the newest app builds and the case model. GitHub picks Latest by date and version unless told, and both tags usually sit on the same commit, so always say it: `--latest` on the release that should be Latest, `--latest=false` on the other. A later firmware-only release is marked Latest and carries the current app builds too; a later app-only release carries the current full image. Keep the repository public, or none of these addresses work for anyone else.
 
 What goes on which release (the two `SHA256SUMS.txt` files have the same name, so each goes on its own release):
 
 | Release | Assets |
 |---|---|
-| `v<version>`, Latest | `Orion-<version>-android.apk`, `Orion-<version>-windows-x64-setup.exe`, `Orion-<version>-windows-x64.zip`, the app `SHA256SUMS.txt`, `orion-firmware-full.bin`, `orion-firmware-full.bin.sha256`, `flash-orion.bat`, `flash-orion.ps1`, `flash-orion.sh`, `LICENSE` |
+| `v<version>`, Latest | `Orion-<version>-android.apk`, `Orion-<version>-windows-x64-setup.exe`, `Orion-<version>-windows-x64.zip`, the app `SHA256SUMS.txt`, `orion_case.blend` (from `case/`), `orion-firmware-full.bin`, `orion-firmware-full.bin.sha256`, `flash-orion.bat`, `flash-orion.ps1`, `flash-orion.sh`, `LICENSE` |
 | `fw-v<version>`, not Latest | `orion-firmware-full.bin`, `orion-firmware-full.bin.sha256`, `bootloader.bin`, `partition-table.bin`, `orion.bin`, `assets.bin`, `wakeword_model.bin`, `flash_args`, the firmware `SHA256SUMS.txt`, `flash-orion.bat`, `flash-orion.ps1`, `flash-orion.sh`, `LICENSE` |
 
 Push `main` and the two tags, then create the firmware release first and the app release last, from the folder that holds `app/`, `firmware/` and `flash/`:
@@ -120,7 +120,7 @@ gh release create fw-v<version> --verify-tag --latest=false --title "Orion firmw
   firmware/flash_args firmware/SHA256SUMS.txt flash/flash-orion.bat flash/flash-orion.ps1 flash/flash-orion.sh LICENSE
 
 gh release create v<version> --verify-tag --latest --title "Orion <version>" --notes-file RELEASE_NOTES.md \
-  app/Orion-<version>-android.apk app/Orion-<version>-windows-x64-setup.exe app/Orion-<version>-windows-x64.zip app/SHA256SUMS.txt \
+  app/Orion-<version>-android.apk app/Orion-<version>-windows-x64-setup.exe app/Orion-<version>-windows-x64.zip app/SHA256SUMS.txt case/orion_case.blend \
   firmware/orion-firmware-full.bin firmware/orion-firmware-full.bin.sha256 \
   flash/flash-orion.bat flash/flash-orion.ps1 flash/flash-orion.sh LICENSE
 ```

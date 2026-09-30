@@ -159,7 +159,7 @@ A two-part case with a desk stand, made for version 1.2 of the board. The screen
 > **Heads up:** the measurements of the 3D case model are not fully accurate yet, and we are working on a fix. Print the two small fit-test parts in [`case/fit_test`](case/fit_test) first and check the fit on your board before you print the whole case.
 
 - Print in PLA or PETG, 0.2 mm layers, no supports. Never use carbon fibre, metal-filled or conductive filament: it blocks Wi-Fi.
-- STL files are in [`case/stl`](case/stl). A multi-colour printer can use [`case/orion_case.3mf`](case/orion_case.3mf), which has the white logos in place.
+- STL files are in [`case/stl`](case/stl). A multi-colour printer can use [`case/orion_case.3mf`](case/orion_case.3mf), which has the white logos in place, and the whole assembly opens in Blender from [`orion_case.blend`](https://github.com/MultiX0/orion/releases/latest/download/orion_case.blend) (also in [`case/`](case/orion_case.blend)).
 - You also need four M2 x 16 self-tapping screws and four small rubber feet.
 
 Dimensions, print settings and assembly order: [case/SPEC.md](case/SPEC.md). The whole case is generated from [`case/cad/params.py`](case/cad/params.py), so a measurement change is one edited number.
