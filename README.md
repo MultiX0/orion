@@ -43,7 +43,7 @@ You do not need to write code or install developer tools. Three steps:
 
 The installer finds the board, gets Espressif's flashing tool, downloads the latest Orion firmware, checks it against the release's checksum, and writes it. You do not need Python: when it is missing, the installer uses the standalone esptool that Espressif publishes. It takes a few minutes and needs no admin rights. If it cannot find the board, try another cable, or hold the **BOOT** button on the side of the board, tap **RST**, let go of BOOT, and run it again. More in [tools/install](tools/install/README.md).
 
-**3. Open the app.** Get the Orion app for [Android or Windows](https://github.com/MultiX0/orion/releases/latest) and tap *Find my Orion*. The app finds the board over Bluetooth, gives it your Wi-Fi, and asks for two keys:
+**3. Open the app.** Get the Orion app for [Android or Windows](https://github.com/MultiX0/orion/releases/latest) (on Windows, run `Orion-1.0.0-windows-x64-setup.exe`; no admin rights needed) and tap *Find my Orion*. The app finds the board over Bluetooth, gives it your Wi-Fi, and asks for two keys:
 
 - a [Fish Audio](https://fish.audio/app/api-keys/) key, for Orion's voice and hearing,
 - a key for the model that does the thinking. [DeepInfra](https://deepinfra.com) is the default; any OpenAI-compatible provider works.

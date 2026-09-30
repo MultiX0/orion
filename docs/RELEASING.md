@@ -75,10 +75,18 @@ flutter build ipa --release            # needs a signing team in Xcode
 
    Build Windows from a short path; a long one fails with MSB3491.
 
+   Then make the Windows builds work on a PC that has never had the Visual C++ Redistributable: copy `msvcp140.dll`, `vcruntime140.dll` and `vcruntime140_1.dll` from Visual Studio's `VC\Redist\MSVC\<ver>\x64\Microsoft.VC145.CRT` into the `Release` folder before zipping it, and build the setup program with [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 or later:
+
+```
+ISCC /DAppVersion=<version> /DRedistDir="<that CRT folder>" windows\installer\orion.iss
+```
+
+   It writes `build\installer\Orion-<version>-windows-x64-setup.exe`, which installs Orion for the current user without admin rights, adds it to the Start menu and uninstalls cleanly from Settings. It is not code signed, so SmartScreen shows "Windows protected your PC" until the file builds a reputation; *More info*, then *Run anyway*.
+
    The Android build compiles the full path of the generated plugin registrant into `libapp.so`, so an APK built under your home folder carries your user name. Build it from a short path on the same drive, for example a junction (`mklink /J C:\orb <checkout>`); a `subst` drive breaks the Kotlin incremental cache.
 
 5. **Test** against a real board, Bluetooth setup included, on each platform you ship.
-6. **Name and check the builds**: `Orion-<version>-android.apk`, `Orion-<version>-windows-x64.zip` (the whole `Release` folder, with `LICENSE` inside), and `SHA256SUMS.txt` over both, with LF line endings. `aapt2 dump badging` on the APK and the file version of `orion.exe` must both say `<version>`.
+6. **Name and check the builds**: `Orion-<version>-android.apk`, `Orion-<version>-windows-x64-setup.exe`, `Orion-<version>-windows-x64.zip` (the whole `Release` folder, with `LICENSE` and the three runtime DLLs inside), and `SHA256SUMS.txt` over all three, with LF line endings. `aapt2 dump badging` on the APK and the file version of `orion.exe` must both say `<version>`.
 7. **Tag** `v<version>` (annotated, `git tag -a v<version> -m "Orion <version>"`) and publish it as in [Publishing on GitHub](#publishing-on-github), with the builds, the `LICENSE` and the notes.
 
 ## Publishing on GitHub
@@ -97,7 +105,7 @@ What goes on which release (the two `SHA256SUMS.txt` files have the same name, s
 
 | Release | Assets |
 |---|---|
-| `v<version>`, Latest | `Orion-<version>-android.apk`, `Orion-<version>-windows-x64.zip`, the app `SHA256SUMS.txt`, `orion-firmware-full.bin`, `orion-firmware-full.bin.sha256`, `flash-orion.bat`, `flash-orion.ps1`, `flash-orion.sh`, `LICENSE` |
+| `v<version>`, Latest | `Orion-<version>-android.apk`, `Orion-<version>-windows-x64-setup.exe`, `Orion-<version>-windows-x64.zip`, the app `SHA256SUMS.txt`, `orion-firmware-full.bin`, `orion-firmware-full.bin.sha256`, `flash-orion.bat`, `flash-orion.ps1`, `flash-orion.sh`, `LICENSE` |
 | `fw-v<version>`, not Latest | `orion-firmware-full.bin`, `orion-firmware-full.bin.sha256`, `bootloader.bin`, `partition-table.bin`, `orion.bin`, `assets.bin`, `wakeword_model.bin`, `flash_args`, the firmware `SHA256SUMS.txt`, `flash-orion.bat`, `flash-orion.ps1`, `flash-orion.sh`, `LICENSE` |
 
 Push `main` and the two tags, then create the firmware release first and the app release last, from the folder that holds `app/`, `firmware/` and `flash/`:
@@ -112,7 +120,7 @@ gh release create fw-v<version> --verify-tag --latest=false --title "Orion firmw
   firmware/flash_args firmware/SHA256SUMS.txt flash/flash-orion.bat flash/flash-orion.ps1 flash/flash-orion.sh LICENSE
 
 gh release create v<version> --verify-tag --latest --title "Orion <version>" --notes-file RELEASE_NOTES.md \
-  app/Orion-<version>-android.apk app/Orion-<version>-windows-x64.zip app/SHA256SUMS.txt \
+  app/Orion-<version>-android.apk app/Orion-<version>-windows-x64-setup.exe app/Orion-<version>-windows-x64.zip app/SHA256SUMS.txt \
   firmware/orion-firmware-full.bin firmware/orion-firmware-full.bin.sha256 \
   flash/flash-orion.bat flash/flash-orion.ps1 flash/flash-orion.sh LICENSE
 ```
