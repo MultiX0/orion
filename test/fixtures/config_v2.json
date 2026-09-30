@@ -1,0 +1,29 @@
+{
+  "device_name": "Orion",
+  "volume": 70,
+  "wake_word_enabled": true,
+  "llm": {
+    "provider": "deepinfra",
+    "base_url": "https://api.deepinfra.com/v1/openai",
+    "api_key": "...4f2a",
+    "model": "google/gemma-4-31B-it-turbo"
+  },
+  "stt": {
+    "provider": "fish",
+    "base_url": null,
+    "api_key": "...9c1d",
+    "model": "transcribe-1"
+  },
+  "tts": {
+    "provider": "fish",
+    "base_url": null,
+    "api_key": "...9c1d",
+    "model": "s2.1-pro-free",
+    "voice": "81c63e6a5ff141d38367fcb009c570d6"
+  },
+  "pc": {
+    "enabled": false,
+    "base_url": "http://192.168.1.20:7331",
+    "token": null
+  }
+}

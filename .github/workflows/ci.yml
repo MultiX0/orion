@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App (analyze and test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          # Matches the revision in .metadata. Raise both together.
+          flutter-version: 3.44.1
+          cache: true
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test tool
+
+      # *.g.dart and *.freezed.dart are gitignored, so generate them first.
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+  firmware:
+    name: Firmware (ESP-IDF 5.5.5 build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container: espressif/idf:v5.5.5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build
+        shell: bash
+        working-directory: firmware
+        run: |
+          # The checkout belongs to another user inside the container.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          . "$IDF_PATH/export.sh"
+          idf.py build
+
+      - name: Upload images
+        uses: actions/upload-artifact@v4
+        with:
+          name: orion-firmware-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            firmware/build/bootloader/bootloader.bin
+            firmware/build/partition_table/partition-table.bin
+            firmware/build/orion.bin
+            firmware/build/assets.bin
+            firmware/build/wakeword_model.bin

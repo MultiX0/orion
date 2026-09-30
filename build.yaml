@@ -1,0 +1,9 @@
+# Protocol JSON is snake_case. Dart fields stay camelCase and map automatically.
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          field_rename: snake
+          explicit_to_json: true
+          include_if_null: false

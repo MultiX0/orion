@@ -1,0 +1,68 @@
+name: Feature request
+description: Suggest something Orion should do, or do differently.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For open ideas you want to talk through first, Discussions is the better place.
+        Use this form when you can describe a concrete change.
+
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part
+      multiple: true
+      options:
+        - Firmware (the board)
+        - App
+        - PC control (harness)
+        - Wake word
+        - Case
+        - Docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way today?
+      placeholder: When I ask Orion to set a timer, it says it cannot.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: How it should work, from the user's side.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Other ways you considered
+      description: Workarounds you use now, or other designs you thought about.
+    validations:
+      required: false
+
+  - type: textarea
+    id: cost
+    attributes:
+      label: Limits to keep in mind
+      description: The board had about 27 KB of internal RAM free after turns when last measured. If the idea needs memory, a new dependency, or a change to the device protocol, say so.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: help
+    attributes:
+      label: Would you work on it
+      options:
+        - Yes, I would like to open a pull request
+        - Maybe, with some guidance
+        - No
+    validations:
+      required: true

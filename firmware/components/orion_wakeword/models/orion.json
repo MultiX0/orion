@@ -1,0 +1,37 @@
+{
+  "type": "micro",
+  "wake_word": "Orion",
+  "author": "MultiX0",
+  "website": "https://github.com/MultiX0",
+  "model": "orion.tflite",
+  "trained_languages": [
+    "ar",
+    "en"
+  ],
+  "version": 2,
+  "micro": {
+    "probability_cutoff": 0.96,
+    "sliding_window_size": 5,
+    "feature_step_size": 10,
+    "tensor_arena_size": 34816,
+    "minimum_esphome_version": "2024.7.0"
+  },
+  "evaluation": {
+    "source": "orion_r2b: orion_full2 step 9000 fine-tuned 2250 steps at lr 1e-4 with 1000 new Fish positives (new voices, spellings اورايون and أورايون, whisper and other cues), 1500 low SNR positives and 4500 low SNR negatives (soft speech, faint clicks, knocks, hums)",
+    "cutoff_source": "sweep 0.90 to 0.97; 0.96 is the lowest cutoff with ambient and unseen noise under orion_full2 at 0.95",
+    "holdout_positive_clips": 204,
+    "holdout_negative_clips": 192,
+    "holdout_false_rejection_rate": 0.186,
+    "holdout_false_accepts": 11,
+    "new_voice_holdout_clips": 240,
+    "new_voice_holdout_false_rejection_rate": 0.225,
+    "alif_spelling_false_rejection_rate": 0.206,
+    "english_new_voice_false_rejection_rate": 0.271,
+    "quiet_speech_false_accepts": "23 of 534",
+    "faint_sound_false_accepts": "3 of 600",
+    "augmented_false_rejection_rate": 0.434,
+    "ambient_false_accepts_per_hour": 1.875,
+    "unseen_noise_detections_per_hour": 11.9,
+    "previous_model_same_tests": "orion_full2 step 9000 at 0.95: holdout frr 0.152, fa 12; new voices frr 0.421; alif 0.412; english new voices 0.448; quiet speech fa 74/534; faint sounds 29/600; augmented frr 0.279; ambient 2.81/h; unseen noise 18.8/h"
+  }
+}

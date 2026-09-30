@@ -1,0 +1,22 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  plugins:
+    - custom_lint
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+  errors:
+    # freezed puts @JsonKey on constructor parameters on purpose.
+    invalid_annotation_target: ignore
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    avoid_print: true
+    always_declare_return_types: true
+    prefer_single_quotes: true
+    unawaited_futures: true
+    require_trailing_commas: true
+    avoid_dynamic_calls: true

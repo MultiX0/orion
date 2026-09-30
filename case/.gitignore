@@ -1,0 +1,12 @@
+# tools and third-party sources (links and hashes in SPEC.md)
+ref/.venv/
+ref/src/
+ref/meshes/*.stl
+ref/*.png
+ref/meshes_log.txt
+# generated
+cad/out/
+cad/*.png
+__pycache__/
+renders/_*.png
+*.blend1

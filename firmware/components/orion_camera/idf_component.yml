@@ -1,0 +1,4 @@
+## OV2640 over DVP through Espressif's camera driver.
+dependencies:
+  idf: ">=5.1"
+  espressif/esp32-camera: "^2.1.7"

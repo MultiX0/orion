@@ -1,0 +1,12 @@
+{ "type": "state", "ts": "2026-09-20T21:10:00Z", "mode": "listening", "wifi_rssi": -50, "volume": 70, "muted": false }
+{ "type": "turn.start", "ts": "2026-09-20T21:10:01Z", "turn_id": "t_00043", "source": "wake" }
+{ "type": "turn.transcript", "ts": "2026-09-20T21:10:02Z", "turn_id": "t_00043", "text": "what time is it" }
+{ "type": "turn.reply", "ts": "2026-09-20T21:10:03Z", "turn_id": "t_00043", "text": "It is ten past nine." }
+{ "type": "turn.tool", "ts": "2026-09-20T21:10:04Z", "turn_id": "t_00043", "call": { "id": "c1", "name": "open_app", "args": { "name": "spotify" }, "status": "pending" } }
+{ "type": "turn.tool", "ts": "2026-09-20T21:10:05Z", "turn_id": "t_00043", "call": { "id": "c1", "status": "done", "result": "ok" } }
+{ "type": "tts.start", "ts": "2026-09-20T21:10:06Z", "turn_id": "t_00043" }
+{ "type": "tts.end", "ts": "2026-09-20T21:10:09Z", "turn_id": "t_00043" }
+{ "type": "turn.end", "ts": "2026-09-20T21:10:09Z", "turn_id": "t_00043", "timings_ms": { "total": 4100 } }
+{ "type": "error", "ts": "2026-09-20T21:11:00Z", "code": "llm_401", "message": "LLM provider rejected the key" }
+{ "type": "log", "ts": "2026-09-20T21:11:01Z", "level": "info", "text": "wifi reconnected" }
+{ "type": "pong", "ts": "2026-09-20T21:11:02Z" }

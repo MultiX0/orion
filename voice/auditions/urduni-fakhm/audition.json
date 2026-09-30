@@ -1,0 +1,75 @@
+{
+  "voice_id": "4cb8371162134edeb4915672ffc66de6",
+  "lines": [
+    {
+      "line": "أهلين! أنا أوريون، شو بتحب أساعدك فيه اليوم؟",
+      "file": "line1.wav",
+      "ttfb_ms": 1382.070499996189,
+      "total_ms": 2990.2742999838665,
+      "seconds": 3.387125,
+      "rms": 1792,
+      "peak": 11185,
+      "clipped": 0,
+      "silence_ratio": 0.461,
+      "heard": "هلين؟  أنا وريون، شو بتحب أساعدك فيه اليوم؟",
+      "cer": 0.083,
+      "english_kept": "-"
+    },
+    {
+      "line": "تمام، لحظة خليني أشوف.",
+      "file": "line2.wav",
+      "ttfb_ms": 1296.5018000104465,
+      "total_ms": 1983.0254999978933,
+      "seconds": 1.6224375,
+      "rms": 934,
+      "peak": 4985,
+      "clipped": 0,
+      "silence_ratio": 0.508,
+      "heard": "تمام لنرى",
+      "cer": 0.667,
+      "english_kept": "-"
+    },
+    {
+      "line": "الجو اليوم بعمّان حلو، حوالي خمسة وعشرين درجة.",
+      "file": "line3.wav",
+      "ttfb_ms": 1196.1400000145659,
+      "total_ms": 2459.065000002738,
+      "seconds": 3.5729375,
+      "rms": 907,
+      "peak": 6143,
+      "clipped": 0,
+      "silence_ratio": 0.462,
+      "heard": "الجو اليوم بعمان حلو  حوالي 25 درجة",
+      "cer": 0.297,
+      "english_kept": "-"
+    },
+    {
+      "line": "فتحتلك الـ Spotify على الـ PC.",
+      "file": "line4.wav",
+      "ttfb_ms": 498.1827000156045,
+      "total_ms": 1287.9332000156865,
+      "seconds": 2.0868125,
+      "rms": 1082,
+      "peak": 7078,
+      "clipped": 0,
+      "silence_ratio": 0.435,
+      "heard": "فتحتلك الـ Spotify على الـ PC",
+      "cer": 0.0,
+      "english_kept": "2/2"
+    },
+    {
+      "line": "ما سمعتك منيح، ممكن تعيدها؟",
+      "file": "line5.wav",
+      "ttfb_ms": 954.6930000069551,
+      "total_ms": 1973.4190999879502,
+      "seconds": 2.829875,
+      "rms": 704,
+      "peak": 5111,
+      "clipped": 0,
+      "silence_ratio": 0.643,
+      "heard": "ما زمناتك مني  مو انك تقيدها؟",
+      "cer": 0.391,
+      "english_kept": "-"
+    }
+  ]
+}

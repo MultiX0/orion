@@ -1,0 +1,6 @@
+## Wake word inference. Same libraries and lines ESPHome's micro_wake_word uses.
+dependencies:
+  idf: ">=5.1"
+  espressif/esp-tflite-micro: "~1.3.3"
+  espressif/esp-nn: "~1.1.2"
+  esphome/esp-micro-speech-features: "^1.2.3"

@@ -1,0 +1,18 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "claude-sonnet-4-5-20250929",
+      "type": "model",
+      "display_name": "Claude Sonnet 4.5",
+      "created_at": "2025-09-29T00:00:00Z"
+    },
+    {
+      "id": "claude-haiku-4-5-20251001",
+      "type": "model",
+      "display_name": "Claude Haiku 4.5",
+      "created_at": "2025-10-01T00:00:00Z"
+    }
+  ],
+  "has_more": false
+}
