@@ -105,8 +105,8 @@ What goes on which release (the two `SHA256SUMS.txt` files have the same name, s
 
 | Release | Assets |
 |---|---|
-| `v<version>`, Latest | `Orion-<version>-android.apk`, `Orion-<version>-windows-x64-setup.exe`, `Orion-<version>-windows-x64.zip`, the app `SHA256SUMS.txt`, `orion_case.blend` (from `case/`), `orion-firmware-full.bin`, `orion-firmware-full.bin.sha256`, `flash-orion.bat`, `flash-orion.ps1`, `flash-orion.sh`, `LICENSE` |
-| `fw-v<version>`, not Latest | `orion-firmware-full.bin`, `orion-firmware-full.bin.sha256`, `bootloader.bin`, `partition-table.bin`, `orion.bin`, `assets.bin`, `wakeword_model.bin`, `flash_args`, the firmware `SHA256SUMS.txt`, `flash-orion.bat`, `flash-orion.ps1`, `flash-orion.sh`, `LICENSE` |
+| `v<version>`, Latest | `Orion-<version>-android.apk`, `Orion-<version>-windows-x64-setup.exe`, `Orion-<version>-windows-x64.zip`, the app `SHA256SUMS.txt`, `orion_case.blend` (from `case/`), `orion.tflite` and `orion.json` (from `firmware/components/orion_wakeword/models/`), `orion-firmware-full.bin`, `orion-firmware-full.bin.sha256`, `flash-orion.bat`, `flash-orion.ps1`, `flash-orion.sh`, `LICENSE` |
+| `fw-v<version>`, not Latest | `orion-firmware-full.bin`, `orion-firmware-full.bin.sha256`, `bootloader.bin`, `partition-table.bin`, `orion.bin`, `assets.bin`, `wakeword_model.bin`, `flash_args`, the firmware `SHA256SUMS.txt`, `orion.tflite`, `orion.json`, `flash-orion.bat`, `flash-orion.ps1`, `flash-orion.sh`, `LICENSE` |
 
 Push `main` and the two tags, then create the firmware release first and the app release last, from the folder that holds `app/`, `firmware/` and `flash/`:
 
@@ -117,10 +117,10 @@ git push origin v<version> fw-v<version>
 gh release create fw-v<version> --verify-tag --latest=false --title "Orion firmware <version>" --notes-file RELEASE_NOTES.md \
   firmware/orion-firmware-full.bin firmware/orion-firmware-full.bin.sha256 firmware/bootloader.bin \
   firmware/partition-table.bin firmware/orion.bin firmware/assets.bin firmware/wakeword_model.bin \
-  firmware/flash_args firmware/SHA256SUMS.txt flash/flash-orion.bat flash/flash-orion.ps1 flash/flash-orion.sh LICENSE
+  firmware/flash_args firmware/SHA256SUMS.txt wakeword/orion.tflite wakeword/orion.json flash/flash-orion.bat flash/flash-orion.ps1 flash/flash-orion.sh LICENSE
 
 gh release create v<version> --verify-tag --latest --title "Orion <version>" --notes-file RELEASE_NOTES.md \
-  app/Orion-<version>-android.apk app/Orion-<version>-windows-x64-setup.exe app/Orion-<version>-windows-x64.zip app/SHA256SUMS.txt case/orion_case.blend \
+  app/Orion-<version>-android.apk app/Orion-<version>-windows-x64-setup.exe app/Orion-<version>-windows-x64.zip app/SHA256SUMS.txt case/orion_case.blend wakeword/orion.tflite wakeword/orion.json \
   firmware/orion-firmware-full.bin firmware/orion-firmware-full.bin.sha256 \
   flash/flash-orion.bat flash/flash-orion.ps1 flash/flash-orion.sh LICENSE
 ```
