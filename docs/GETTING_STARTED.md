@@ -14,7 +14,7 @@ From a bare board to "Orion, what time is it?". About half an hour if you alread
 
 **Accounts and keys**
 
-- A **Fish Audio** API key from https://fish.audio (the app has a "Get your Fish Audio API key" button). Text to speech on the free `s2.1-pro-free` model costs nothing. Speech to text on Fish bills API credit separately: $0.36 per hour of audio, so $1 is about 2.8 hours of listening, or about 2,500 questions of 4 seconds. The account needs at least $1 of API credit for Orion to hear you.
+- A **Fish Audio** API key from https://fish.audio/?fpr=ipdev (the app has a "Get your Fish Audio API key" button). Text to speech on the free `s2.1-pro-free` model costs nothing. Speech to text on Fish bills API credit separately: $0.36 per hour of audio, so $1 is about 2.8 hours of listening, or about 2,500 questions of 4 seconds. The account needs at least $1 of API credit for Orion to hear you.
 - A key for a **language model** with an OpenAI compatible API. The default is DeepInfra (Gemma 4 31B to answer, GLM 5.3 Flash for tasks on the PC). OpenAI, Anthropic, Groq, OpenRouter, Ollama and any custom endpoint work too. See [PROVIDERS.md](PROVIDERS.md).
 
 **A device to set it up with**

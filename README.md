@@ -45,7 +45,7 @@ The installer finds the board, gets Espressif's flashing tool, downloads the lat
 
 **3. Open the app.** Get the Orion app for [Android or Windows](https://github.com/MultiX0/orion/releases/latest) (on Windows, run `Orion-1.0.0-windows-x64-setup.exe`; no admin rights needed) and tap *Find my Orion*. The app finds the board over Bluetooth, gives it your Wi-Fi, and asks for two keys:
 
-- a [Fish Audio](https://fish.audio/app/api-keys/) key, for Orion's voice and hearing,
+- a [Fish Audio](https://fish.audio/?fpr=ipdev) key, for Orion's voice and hearing,
 - a key for the model that does the thinking. [DeepInfra](https://deepinfra.com) is the default; any OpenAI-compatible provider works.
 
 When the board shows its idle screen, say **"Orion"**.
@@ -69,7 +69,7 @@ Things you can say:
 
 **On the board**
 - A custom wake word, "Orion", trained for Arabic and English speakers and run on the board with TensorFlow Lite Micro.
-- Speech in and out through [Fish Audio](https://fish.audio), in Orion's own voice. Any OpenAI-compatible speech endpoint can be used instead.
+- Speech in and out through [Fish Audio](https://fish.audio/?fpr=ipdev), in Orion's own voice. Any OpenAI-compatible speech endpoint can be used instead.
 - Answers stream: Orion starts speaking the first sentence while the rest is still being written.
 - A camera it can look through when you ask what it sees.
 - A 240x240 touch screen with an animated orb for listening, thinking and speaking, a push-to-talk button, and a menu for Wi-Fi setup and factory reset.
@@ -215,4 +215,4 @@ Parts made by others keep their own licenses: ESP-IDF, LVGL, TensorFlow Lite Mic
 
 Orion is made by **MultiX0**: [github.com/MultiX0](https://github.com/MultiX0). The project's website is [joinorion.io](https://www.joinorion.io).
 
-Thanks to [LilyGO](https://lilygo.cc) for the board, [Espressif](https://www.espressif.com) for the ESP32-S3 and its tools, [Fish Audio](https://fish.audio) for the voice, [DeepInfra](https://deepinfra.com) for the default models, and the people behind [microWakeWord](https://github.com/OHF-Voice/micro-wake-word), [LVGL](https://lvgl.io) and [Flutter](https://flutter.dev).
+Thanks to [LilyGO](https://lilygo.cc) for the board, [Espressif](https://www.espressif.com) for the ESP32-S3 and its tools, [Fish Audio](https://fish.audio/?fpr=ipdev) for the voice, [DeepInfra](https://deepinfra.com) for the default models, and the people behind [microWakeWord](https://github.com/OHF-Voice/micro-wake-word), [LVGL](https://lvgl.io) and [Flutter](https://flutter.dev).

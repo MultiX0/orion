@@ -115,7 +115,7 @@ void main() {
     await pump(tester);
     await tapText(tester, 'Get your Fish Audio API key');
     expect(opened.single.toString(), fishKeyUrl);
-    expect(fishKeyUrl, 'https://fish.audio?fpr=d9z5u5&fp_sid=ipdev');
+    expect(fishKeyUrl, 'https://fish.audio/?fpr=ipdev');
   });
 
   testWidgets('Test says no credit for a Fish 402 and wrong key for a 401', (

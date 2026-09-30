@@ -7,7 +7,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/widgets/orion_button.dart';
 
 /// Where a Fish Audio key comes from. Exactly this link, referral included.
-const fishKeyUrl = 'https://fish.audio?fpr=d9z5u5&fp_sid=ipdev';
+const fishKeyUrl = 'https://fish.audio/?fpr=ipdev';
 
 /// Opens a link in the external browser. A provider so tests can watch the
 /// link go out without a browser.

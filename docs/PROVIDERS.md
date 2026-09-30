@@ -76,7 +76,7 @@ The speech presets for DeepInfra, OpenAI and Groq use the same keychain entry as
 
 ## Fish Audio
 
-Base URL `https://api.fish.audio`, bearer key from https://fish.audio (the app's "Get your Fish Audio API key" button).
+Base URL `https://api.fish.audio`, bearer key from https://fish.audio/?fpr=ipdev (the app's "Get your Fish Audio API key" button).
 
 | Call | What |
 |---|---|
