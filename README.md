@@ -199,6 +199,50 @@ Most people never need this; the installer and the app releases cover everything
 
 Further reading: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the app is organised, [docs/PROVIDERS.md](docs/PROVIDERS.md) for model and voice settings, [docs/UI.md](docs/UI.md) and [brand/](brand/README.md) for the look, and [docs/CODE_STYLE.md](docs/CODE_STYLE.md) for how code is written here.
 
+## Working on Orion with an AI assistant
+
+Orion is written down well enough for an AI assistant (ChatGPT, Claude, Gemini, Copilot, Cursor and the like) to find its way around it. To get help, give your assistant this repository and a message like:
+
+> I'm working with Orion (https://github.com/MultiX0/orion), a voice assistant that runs on a LilyGO T-Camera Plus S3, with a Flutter app for Windows and Android. Read its README.md, docs/ARCHITECTURE.md and docs/DEVICE_PROTOCOL.md first. Then help me: *what you want to do*.
+
+**Where things are**
+
+| Folder | What it is | Read first |
+|---|---|---|
+| `firmware/` | The board's firmware, ESP-IDF 5.5.5 in C, one component per concern | [docs/FIRMWARE.md](docs/FIRMWARE.md) |
+| `lib/`, `test/` | The Flutter app, one folder per feature | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/UI.md](docs/UI.md) |
+| `lib/features/harness/` | The PC and phone brain and the tools it can use on a computer | [docs/HARNESS.md](docs/HARNESS.md) |
+| `tool/` | Dart tools for the app, including a pretend board | |
+| `tools/` | Board scripts and the one-click installer | [tools/install/README.md](tools/install/README.md) |
+| `wakeword/` | Training the "Orion" wake word, and the model that ships | [docs/WAKEWORD.md](docs/WAKEWORD.md) |
+| `case/` | The 3D printed case | [case/SPEC.md](case/SPEC.md) |
+| `docs/` | Everything else, with an index | [docs/README.md](docs/README.md) |
+
+Anything the app and the board both touch (the HTTP API, the WebSocket, the settings) is defined in [docs/DEVICE_PROTOCOL.md](docs/DEVICE_PROTOCOL.md). Models, keys and Fish Audio are in [docs/PROVIDERS.md](docs/PROVIDERS.md).
+
+**Commands**
+
+```
+# the app
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs   # generated Dart is not in git
+dart run tool/mock_device/main.dart                         # a pretend board on localhost:8080, pairing code 123456
+flutter run -d windows                                      # or an Android device
+flutter analyze && flutter test
+
+# the firmware, from firmware/ with ESP-IDF 5.5.5
+idf.py build
+```
+
+**Rules to give your assistant**
+
+- Never ask for, print or commit an API key or a pairing token. Keys live only on the board and in the app's secure storage; `.env` is for local scripts and is not in git.
+- When a change touches both the app and the board, change both sides and [docs/DEVICE_PROTOCOL.md](docs/DEVICE_PROTOCOL.md) together.
+- Do not hand-edit generated files (`*.g.dart`, `*.freezed.dart`, `lib/core/theme/tokens.dart`, the firmware's fonts and images). Change the source and rerun its generator, as [docs/CODE_STYLE.md](docs/CODE_STYLE.md) explains.
+- The board is short on internal memory: large buffers go in PSRAM. [docs/FIRMWARE.md](docs/FIRMWARE.md) has the details.
+- Ask before flashing a board or playing sound on it.
+- Plain English in code, comments, docs and commits, with no em dashes and no emojis.
+
 ## Contributing
 
 Bug reports, ideas and pull requests are welcome. Open an issue first for anything large, so we can agree on the shape before you spend time on it. For code, follow [docs/CODE_STYLE.md](docs/CODE_STYLE.md), and for the app run `flutter analyze` and `dart format .` before you send it. By contributing you agree that your work is shared under the same license as the rest of Orion.
