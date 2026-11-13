@@ -33,10 +33,10 @@ class FishCreditNote extends ConsumerWidget {
           const MonoLabel('// About Fish credit', live: false),
           const SizedBox(height: Space.xs),
           Text(
-            'Speaking is free on s2.1-pro-free. Listening is not: speech to '
-            'text uses Fish API credit, separate from the free tier, at '
-            r'$0.36 per hour of audio. $1 is about 2.8 hours of listening, '
-            'or about 2,500 questions of 4 seconds.',
+            'Orion speaks with Fish Drama 3 and listens with Fish speech to '
+            'text. Both use Fish API credit. Listening costs '
+            r'$0.36 per hour of audio: $1 is about 2.8 hours, or about '
+            '2,500 questions of 4 seconds. s2.1-pro-free speaks at no cost.',
             style: text.bodySmall,
           ),
           const SizedBox(height: Space.xs),

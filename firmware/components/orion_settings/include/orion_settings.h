@@ -38,6 +38,9 @@ esp_err_t orion_settings_apply(const char *json, size_t len, char *out, size_t o
 // Blocks up to 30 s while a task with an internal stack makes the request.
 esp_err_t orion_settings_test(const char *stage, char *out, size_t out_len);
 
+// pc.enabled, and its base_url and token, from RAM (any task).
+bool orion_settings_pc(char *url, size_t url_len, char *token, size_t token_len);
+
 // What /api/state and the beacon show. From the RAM copy.
 void orion_settings_basic(char *name, size_t name_len, int32_t *volume, bool *wake_word);
 

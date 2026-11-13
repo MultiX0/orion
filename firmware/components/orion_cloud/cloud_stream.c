@@ -334,6 +334,7 @@ esp_err_t cloud_reply_stream(const char *text, char *reply, size_t reply_len,
                 }
                 dry_since = 0;
             }
+            cloud_progress();
             if (n && !sink(s_drain, n, sink_ctx)) {
                 s_cancel = true;
                 break;
@@ -396,6 +397,7 @@ esp_err_t cloud_reply_stream(const char *text, char *reply, size_t reply_len,
     t->gap_ms = gap;
     t->pieces = (uint8_t) s_st.pieces;
     t->used_camera = s_st.used_camera;
+    t->wants_reply = s_st.listen && s_st.llm_err == ESP_OK && !s_cancel;
 
     if (s_cancel) return ESP_ERR_INVALID_STATE;
     if (s_st.llm_err != ESP_OK) return s_st.llm_err;

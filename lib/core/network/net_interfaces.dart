@@ -83,6 +83,27 @@ abstract final class NetInterfaces {
     ];
   }
 
+  /// This machine's addresses on the same /24 as [host], the only network
+  /// worth sweeping for a board last seen there. Empty when [host] is a
+  /// name rather than an IPv4 address, or when no adapter is on that
+  /// network (office Wi-Fi, mobile data): a sweep there would only knock on
+  /// strangers' hosts.
+  static List<String> onSameSubnet(String host, List<LocalNic> nics) {
+    final colon = host.indexOf(':');
+    final prefix = _prefix24(colon < 0 ? host : host.substring(0, colon));
+    if (prefix == null) return const <String>[];
+    return <String>[
+      for (final nic in nics)
+        if (_prefix24(nic.address) == prefix) nic.address,
+    ];
+  }
+
+  static String? _prefix24(String address) {
+    final ip = InternetAddress.tryParse(address);
+    if (ip == null || ip.type != InternetAddressType.IPv4) return null;
+    return ip.address.substring(0, ip.address.lastIndexOf('.'));
+  }
+
   /// The addresses a sweep should use, best first and capped.
   static Future<List<String>> sweepAddresses({
     String? preferred,

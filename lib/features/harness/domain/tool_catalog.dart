@@ -86,8 +86,13 @@ abstract final class ToolCatalog {
   static const agentTask = ToolSpec(
     name: 'agent_task',
     description:
-        'Hand a multi-step task to the PC agent. Use for anything not '
-        'covered by the other tools.',
+        'Hand a task to the PC agent, which has full control of this '
+        'computer: it sees the screen and uses the mouse and keyboard in any '
+        'app (a browser, Settings, File Explorer, an installer), runs '
+        'commands and downloads files. Use it for anything on the PC the '
+        'other tools do not do, for example "open a browser and download the '
+        'Debian 13 netinst ISO". It takes a minute or more and reports back '
+        'when done.',
     safety: ToolSafety.always,
     parameters: <String, dynamic>{
       'type': 'object',

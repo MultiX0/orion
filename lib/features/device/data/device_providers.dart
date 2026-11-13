@@ -14,6 +14,7 @@ import '../domain/device_config.dart';
 import '../domain/device_info.dart';
 import '../domain/ws_event.dart';
 import '../../harness/data/harness_providers.dart';
+import 'board_locator.dart';
 import 'fake_device_client.dart';
 import 'http_device_client.dart';
 
@@ -86,4 +87,25 @@ Future<DeviceInfo> deviceInfo(Ref ref) async {
 Future<DeviceConfig> deviceConfig(Ref ref) async {
   final result = await ref.watch(deviceClientProvider).config();
   return result.getOrThrow();
+}
+
+/// Follows the paired board to a new address (Orion Link). Watched by the
+/// app shell, so it runs while the app does. Off with the fakes.
+@Riverpod(keepAlive: true)
+BoardLocator? boardLocator(Ref ref) {
+  if (ref.watch(useFakesProvider)) return null;
+  final locator = BoardLocator(
+    find: findBoardById,
+    moved: (device) =>
+        ref.read(appSettingsProvider.notifier).setPairedDevice(device),
+  );
+  void push() => locator.update(
+    ref.read(pairedDeviceProvider),
+    ref.read(connectionStatusProvider).value ?? ConnectionStatus.disconnected,
+  );
+  ref.listen(connectionStatusProvider, (_, _) => push());
+  ref.listen(pairedDeviceProvider, (_, _) => push());
+  push();
+  ref.onDispose(locator.dispose);
+  return locator;
 }

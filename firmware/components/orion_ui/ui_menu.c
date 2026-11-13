@@ -1,7 +1,7 @@
 // The menu: a 30 px hairline button in the top left corner, and the panel it
-// opens. Three cards, right to left, Arabic titles, brand card recipe from
-// brand/components.md shrunk to 240 px. Scrolls when the cards do not fit;
-// nothing is ever cut off with no way to reach it.
+// opens. Five cards (hub, PC, network, camera, reset), right to left, Arabic
+// titles, brand card recipe from brand/components.md shrunk to 240 px. Scrolls
+// when the cards do not fit; nothing is ever cut off with no way to reach it.
 #include "ui_internal.h"
 
 #include <stdio.h>
@@ -19,6 +19,11 @@ static void *s_refresh_ctx, *s_wifi_ctx, *s_reset_ctx;
 static lv_obj_t *s_reset_label;
 static lv_timer_t *s_reset_armed;
 static lv_obj_t *s_pc_state, *s_pc_name, *s_pc_ip;
+static lv_obj_t *s_hub_state, *s_hub_name, *s_hub_ip, *s_hub_btn_label;
+static ui_tap_cb_t s_hub_cb;
+static void *s_hub_ctx;
+static ui_hub_t s_hub;
+static lv_timer_t *s_hub_armed;
 static lv_obj_t *s_net_state, *s_net_ssid, *s_net_ip;
 static lv_timer_t *s_hide_timer;
 static bool s_visible;
@@ -39,6 +44,10 @@ static lv_obj_t *card_row(lv_obj_t *card, int idx, const char *name, lv_obj_t **
     lv_obj_t *n = ui_mono_label(card, UI_TEXT_FAINT, name);
     lv_obj_align(n, LV_ALIGN_TOP_LEFT, 0, y);
     *value = ui_ar_label(card, UI_TEXT_MUTED, &ui_font_text_16, "--");
+    // One line right of the label column: a long hub or PC name ends in "...".
+    lv_label_set_long_mode(*value, LV_LABEL_LONG_DOT);
+    lv_obj_set_size(*value, CARD_W - 2 * CARD_PAD - 60, lv_font_get_line_height(&ui_font_text_16));
+    lv_obj_set_style_text_align(*value, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_align(*value, LV_ALIGN_TOP_RIGHT, 0, y - 6);
     return n;
 }
@@ -92,6 +101,55 @@ static void on_reset(lv_event_t *e)
     if (s_reset_cb) {
         s_reset_cb(s_reset_ctx);
     }
+}
+
+// The hub card's button. Forgetting a paired hub asks twice, like reset.
+static const char *hub_button_text(ui_hub_t h)
+{
+    switch (h) {
+    case UI_HUB_FOUND: return "اتصل";
+    case UI_HUB_PAIRING:
+    case UI_HUB_WAITING: return "انتظر";
+    case UI_HUB_CONNECTED:
+    case UI_HUB_OFFLINE: return "افصل";
+    default: return "ابحث";
+    }
+}
+
+static void hub_disarm(lv_timer_t *t)
+{
+    (void) t;
+    s_hub_armed = NULL;  // one shot, LVGL deletes it after this call
+    lv_label_set_text(s_hub_btn_label, hub_button_text(s_hub));
+    lv_obj_set_style_text_color(s_hub_btn_label, lv_color_hex(UI_TEXT_MUTED), 0);
+}
+
+static void on_hub(lv_event_t *e)
+{
+    (void) e;
+    if (s_hub == UI_HUB_PAIRING || s_hub == UI_HUB_WAITING) {
+        return;
+    }
+    if ((s_hub == UI_HUB_CONNECTED || s_hub == UI_HUB_OFFLINE) && !s_hub_armed) {
+        lv_label_set_text(s_hub_btn_label, "متأكد؟");
+        lv_obj_set_style_text_color(s_hub_btn_label, lv_color_hex(UI_TEXT_WHITE), 0);
+        s_hub_armed = lv_timer_create(hub_disarm, 4000, NULL);
+        lv_timer_set_repeat_count(s_hub_armed, 1);
+        return;
+    }
+    if (s_hub_armed) {
+        lv_timer_delete(s_hub_armed);
+        hub_disarm(NULL);   // a forget can take seconds: do not leave the prompt up
+    }
+    if (s_hub_cb) {
+        s_hub_cb(s_hub_ctx);
+    }
+}
+
+void ui_menu_on_hub_action(ui_tap_cb_t cb, void *ctx)
+{
+    s_hub_cb = cb;
+    s_hub_ctx = ctx;
 }
 
 void ui_menu_on_reset(ui_tap_cb_t cb, void *ctx)
@@ -208,6 +266,17 @@ static void build_panel(lv_obj_t *parent)
     lv_obj_set_scrollbar_mode(s_list, LV_SCROLLBAR_MODE_AUTO);
     lv_obj_add_event_cb(s_list, touched, LV_EVENT_PRESSED, NULL);
 
+    // First: the home server, when there is one, is where Orion thinks.
+    lv_obj_t *hub = ui_card_new(s_list, CARD_W, HEAD_H + 3 * ROW_H + 30 + 2 * CARD_PAD);
+    card_head(hub, "// HUB", "الخادم");
+    card_row(hub, 0, "STATE", &s_hub_state);
+    card_row(hub, 1, "NAME", &s_hub_name);
+    card_row(hub, 2, "IP", &s_hub_ip);
+    lv_obj_t *hub_btn = ui_ghost_button(hub, hub_button_text(UI_HUB_NONE), on_hub);
+    lv_obj_set_width(hub_btn, 84);
+    lv_obj_align(hub_btn, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
+    s_hub_btn_label = lv_obj_get_child(hub_btn, 0);
+
     lv_obj_t *pc = ui_card_new(s_list, CARD_W, HEAD_H + 3 * ROW_H + 30 + 2 * CARD_PAD);
     card_head(pc, "// PC", "الكمبيوتر");
     card_row(pc, 0, "STATE", &s_pc_state);
@@ -251,6 +320,7 @@ void ui_menu_create(lv_obj_t *parent)
     build_panel(parent);
     ui_menu_set_pc(false, false, NULL, NULL);
     ui_menu_set_net(false, NULL, NULL, 0);
+    ui_menu_set_hub(UI_HUB_NONE, NULL, NULL, NULL);
 }
 
 static void hidden(lv_anim_t *a)
@@ -333,6 +403,36 @@ void ui_menu_set_pc(bool found, bool connected, const char *name, const char *ip
             connected ? UI_TEXT_CYAN : (found ? UI_TEXT_WHITE : UI_TEXT_FAINT));
     set_row(s_pc_name, name, UI_TEXT_MUTED);
     set_row(s_pc_ip, ip, UI_TEXT_MUTED);
+}
+
+void ui_menu_set_hub(ui_hub_t state, const char *name, const char *ip, const char *code)
+{
+    static char waiting[48];
+    const char *text = "ما في خادم";
+    uint32_t color = UI_TEXT_FAINT;
+    switch (state) {
+    case UI_HUB_SCANNING:  text = "عم دوّر..."; color = UI_TEXT_WHITE; break;
+    case UI_HUB_FOUND:     text = "لقيت خادم"; color = UI_TEXT_WHITE; break;
+    case UI_HUB_PAIRING:   text = "عم يتصل..."; color = UI_TEXT_WHITE; break;
+    case UI_HUB_WAITING:
+        // The owner approves this code on the hub.
+        snprintf(waiting, sizeof(waiting), "وافق: %s", code && code[0] ? code : "--");
+        text = waiting;
+        color = UI_TEXT_WHITE;
+        break;
+    case UI_HUB_CONNECTED: text = "متصل"; color = UI_TEXT_CYAN; break;
+    case UI_HUB_OFFLINE:   text = "مش متصل"; color = UI_TEXT_FAINT; break;
+    case UI_HUB_FAILED:    text = "ما زبط"; color = UI_TEXT_FAINT; break;
+    default: break;
+    }
+    s_hub = state;
+    set_row(s_hub_state, text, color);
+    set_row(s_hub_name, name, UI_TEXT_MUTED);
+    set_row(s_hub_ip, ip, UI_TEXT_MUTED);
+    if (!s_hub_armed) {
+        lv_label_set_text(s_hub_btn_label, hub_button_text(state));
+        lv_obj_set_style_text_color(s_hub_btn_label, lv_color_hex(UI_TEXT_MUTED), 0);
+    }
 }
 
 void ui_menu_set_net(bool online, const char *ssid, const char *ip, int rssi)

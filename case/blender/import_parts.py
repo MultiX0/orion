@@ -6,7 +6,13 @@ Board frame, 1 unit = 1 mm. Case parts go to CASE, provisional modules to REF_mo
 import os
 import bpy
 
-ROOT = r"C:\Users\multix\Desktop\Dev\yt-projects\orion\case"
+# The repository: two folders up from this script, or ORION_ROOT, or the folder Blender was
+# started in when the script is exec'd from Blender's console (start Blender in the repository).
+try:
+    REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+except NameError:
+    REPO = os.environ.get("ORION_ROOT", os.getcwd())
+ROOT = os.path.join(REPO, "case")
 OUT = os.path.join(ROOT, "cad", "out")
 sc = bpy.context.scene
 

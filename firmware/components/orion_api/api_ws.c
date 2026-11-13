@@ -11,12 +11,15 @@
 #include <string.h>
 #include <sys/select.h>
 
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
+#include "lwip/sockets.h"
 #include "orion_api.h"
+#include "orion_settings.h"
 
 static const char *TAG = "orion_api";
 
@@ -86,6 +89,91 @@ static bool brain_ok(const char *b)
         }
     }
     return true;
+}
+
+// The IPv4 address a socket's peer connects from: where that app is right now,
+// whatever address it was paired at. The server socket may be IPv6 with the
+// IPv4 address mapped into it.
+static bool peer_ipv4(int fd, char *out, size_t len)
+{
+    struct sockaddr_storage ss;
+    socklen_t sl = sizeof(ss);
+    if (getpeername(fd, (struct sockaddr *) &ss, &sl) != 0) {
+        return false;
+    }
+    if (ss.ss_family == AF_INET) {
+        const struct sockaddr_in *a = (const struct sockaddr_in *) &ss;
+        return inet_ntop(AF_INET, &a->sin_addr, out, len) != NULL;
+    }
+#if CONFIG_LWIP_IPV6
+    if (ss.ss_family == AF_INET6) {
+        const struct sockaddr_in6 *a = (const struct sockaddr_in6 *) &ss;
+        const uint8_t *b = (const uint8_t *) &a->sin6_addr;
+        static const uint8_t mapped[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff };
+        if (memcmp(b, mapped, sizeof(mapped)) == 0) {
+            snprintf(out, len, "%u.%u.%u.%u", b[12], b[13], b[14], b[15]);
+            return true;
+        }
+    }
+#endif
+    return false;
+}
+
+// "http://host:port..." to host and port.
+static bool split_url(const char *url, char *host, size_t host_len, int *port)
+{
+    const char *h = strstr(url, "://");
+    h = h ? h + 3 : url;
+    const char *colon = strchr(h, ':');
+    const char *slash = strchr(h, '/');
+    const char *end = colon ? colon : (slash ? slash : h + strlen(h));
+    if (end == h || (size_t) (end - h) >= host_len) {
+        return false;
+    }
+    memcpy(host, h, end - h);
+    host[end - h] = '\0';
+    *port = colon ? atoi(colon + 1) : 80;
+    return *port > 0 && *port < 65536;
+}
+
+// The PC brain is the PC that linked with the token pc_token holds. When it
+// links from another address than the one stored (DHCP gave the PC a new
+// one), pc.base_url follows, through the same path as POST /api/config.
+// False when the settings could not be written now (a turn is running): the
+// next ping tries again.
+static bool s_pc_retry;
+static char s_pc_peer[16];
+
+static bool pc_follow(const char *peer, const char *tok)
+{
+    // From RAM: this runs on the HTTP server's task, whose stack is in PSRAM,
+    // where reading NVS would assert.
+    char want[96] = "";
+    char url[160] = "";
+    if (!orion_settings_pc(url, sizeof(url), want, sizeof(want))) {
+        memset(want, 0, sizeof(want));
+        return true;
+    }
+    const bool same = want[0] && strcmp(want, tok) == 0;
+    memset(want, 0, sizeof(want));
+    char host[64];
+    int port = 0;
+    if (!same || !peer[0] || !split_url(url, host, sizeof(host), &port)) {
+        return true;
+    }
+    if (strcmp(host, peer) == 0) {
+        return true;
+    }
+    char body[96];
+    snprintf(body, sizeof(body), "{\"pc\":{\"base_url\":\"http://%s:%d\"}}", peer, port);
+    char *out = heap_caps_malloc(2048, MALLOC_CAP_SPIRAM);
+    if (!out) {
+        return false;
+    }
+    const esp_err_t err = orion_settings_apply(body, strlen(body), out, 2048);
+    free(out);
+    ESP_LOGI(TAG, "the PC brain moved from %s to %s:%d: %s", host, peer, port, esp_err_to_name(err));
+    return err == ESP_OK;
 }
 
 // Works out who is here and tells main when that changed. Any task.
@@ -264,8 +352,24 @@ static esp_err_t ws_open(httpd_req_t *req)
     ESP_LOGI(TAG, "ws client on fd %d%s%s", fd, client[0] ? ", " : "", client);
     esp_err_t err = send_text(req, body);
     if (strcmp(client, "pc") == 0) {
+        // Before the link counts: a PC that links is checked at once, and that
+        // check should already go to where the PC is now.
+        char peer[16] = "";
+        if (peer_ipv4(fd, peer, sizeof(peer))) {
+            strlcpy(s_pc_peer, peer, sizeof(s_pc_peer));
+            s_pc_retry = !pc_follow(peer, tok);
+        }
         link_add(fd, KIND_PC, "", "");
     } else if (strcmp(client, "phone") == 0) {
+        // The host a phone offers is its own guess at its address; the one
+        // its link comes from is the one that reaches it.
+        char peer[16];
+        const char *colon = strrchr(brain, ':');
+        if (brain[0] && colon && peer_ipv4(fd, peer, sizeof(peer))) {
+            char fixed[48];
+            snprintf(fixed, sizeof(fixed), "%s%s", peer, colon);
+            strlcpy(brain, fixed, sizeof(brain));
+        }
         link_add(fd, KIND_PHONE, brain, tok);
     }
     memset(tok, 0, sizeof(tok));
@@ -298,6 +402,14 @@ static esp_err_t h_ws(httpd_req_t *req)
         buf[f.len] = '\0';
     }
     link_seen(fd);
+    if (s_pc_retry) {
+        // Only set when the PC brain's own link asked for the move, so its
+        // token is the stored one: read it again rather than keep it.
+        char tok[96] = "";
+        orion_settings_pc(NULL, 0, tok, sizeof(tok));
+        s_pc_retry = !pc_follow(s_pc_peer, tok);
+        memset(tok, 0, sizeof(tok));
+    }
     if (f.type == HTTPD_WS_TYPE_TEXT && strstr(buf, "\"ping\"")) {
         return send_text(req, "{\"type\":\"pong\"}");
     }

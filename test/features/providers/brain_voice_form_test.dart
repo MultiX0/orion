@@ -81,7 +81,7 @@ void main() {
     await tapText(tester, 'Send to Orion');
     expect(board.stored.stt?.provider, 'fish');
     expect(board.stored.stt?.model, 'transcribe-1');
-    expect(board.stored.tts?.model, 's2.1-pro-free');
+    expect(board.stored.tts?.model, 'drama-3');
     expect(board.stored.stt?.apiKey, 'fish-key');
     expect(board.stored.tts?.apiKey, 'fish-key');
     expect(board.stored.llm?.model, 'google/gemma-4-31B-it-turbo');

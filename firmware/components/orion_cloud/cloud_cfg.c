@@ -5,7 +5,7 @@
 // A version 2 key that is missing falls back to its version 1 key, so a board
 // provisioned before version 2 behaves exactly as it did. With nothing
 // stored at all, the defaults are the contract's: Fish transcribe-1, Fish
-// s2.1-pro-free, Gemma 4 31B turbo on DeepInfra.
+// Drama 3 with the Orion Voice, Gemma 4 31B turbo on DeepInfra.
 //
 // Read once at init and again on orion_cloud_reload, on a task whose stack is
 // in internal RAM: the cloud workers keep theirs in PSRAM, and an NVS read
@@ -88,6 +88,19 @@ static void load_llm(cloud_stage_cfg_t *st)
              "google/gemma-4-31B-it-turbo");
 }
 
+// The request fields the provider takes. "llm_prov" is the label the app
+// stores: deepinfra, openai, anthropic, groq, openrouter, ollama, custom.
+static void llm_params(cloud_cfg_t *c)
+{
+    char prov[24] = "";
+    orion_config_get_str(ORION_CFG_LLM_PROV, prov, sizeof(prov));
+    const bool anthropic = strcmp(prov, "anthropic") == 0 || strstr(c->llm.origin, "anthropic.com");
+    const bool openai = strcmp(prov, "openai") == 0 || strstr(c->llm.origin, "api.openai.com");
+    c->llm_no_temp = anthropic || openai;
+    c->llm_mct = openai;
+    c->llm_think = anthropic ? LLM_THINK_DISABLED : LLM_THINK_ASIS;
+}
+
 static void load_stt(cloud_stage_cfg_t *st)
 {
     char prov[24];
@@ -119,7 +132,7 @@ static void load_tts(cloud_stage_cfg_t *st)
     if (st->prov == CLOUD_PROV_FISH) {
         set_url(st, FISH_TTS_URL, "");
         bearer(ORION_CFG_TTS_KEY, ORION_CFG_FISH_KEY, st->auth, sizeof(st->auth));
-        if (!st->model[0]) strlcpy(st->model, "s2.1-pro-free", sizeof(st->model));
+        if (!st->model[0]) strlcpy(st->model, "drama-3", sizeof(st->model));
         first_of(ORION_CFG_TTS_VOICE, ORION_CFG_FISH_VOICE, st->voice, sizeof(st->voice),
                  FISH_DEFAULT_VOICE);
         return;
@@ -130,7 +143,8 @@ static void load_tts(cloud_stage_cfg_t *st)
     bearer(ORION_CFG_TTS_KEY, ORION_CFG_DEEPINFRA_KEY, st->auth, sizeof(st->auth));
     // tts_model is shared with version 1. A Fish model name left behind from
     // before the switch would be rejected by the new server, so it is replaced.
-    if (!st->model[0] || strncmp(st->model, "s1", 2) == 0 || strncmp(st->model, "s2", 2) == 0) {
+    if (!st->model[0] || strncmp(st->model, "s1", 2) == 0 || strncmp(st->model, "s2", 2) == 0 ||
+        strncmp(st->model, "drama", 5) == 0) {
         strlcpy(st->model, OPENAI_TTS_DEFAULT, sizeof(st->model));
     }
     first_of(ORION_CFG_TTS_VOICE, NULL, st->voice, sizeof(st->voice), NULL);
@@ -158,6 +172,24 @@ static void load_pc(cloud_stage_cfg_t *st)
     memset(token, 0, sizeof(token));
 }
 
+// hub_url and hub_token are written when the board pairs with an Orion Hub
+// (orion_hub.c, from the menu, the console or the app). Both set: the hub is on.
+static void load_hub(cloud_stage_cfg_t *st, char *name, size_t name_len)
+{
+    char url[160] = "";
+    char token[96] = "";
+    memset(st, 0, sizeof(*st));
+    st->prov = CLOUD_PROV_OPENAI;
+    orion_config_copy_str("hub_name", name, name_len, "");
+    orion_config_get_str("hub_url", url, sizeof(url));
+    orion_config_get_str("hub_token", token, sizeof(token));
+    if (url[0] && token[0]) {
+        set_url(st, url, "/v1/chat/completions");
+        snprintf(st->auth, sizeof(st->auth), "Bearer %s", token);
+    }
+    memset(token, 0, sizeof(token));
+}
+
 esp_err_t cloud_cfg_load(void)
 {
     if (!s_cfg) {
@@ -166,14 +198,17 @@ esp_err_t cloud_cfg_load(void)
     }
     cloud_cfg_t *c = s_cfg;
     load_llm(&c->llm);
+    llm_params(c);
     load_stt(&c->stt);
     load_tts(&c->tts);
     load_pc(&c->pc);
+    load_hub(&c->hub, c->hub_name, sizeof(c->hub_name));
     c->tts_rate = c->tts.prov == CLOUD_PROV_FISH ? s_fish_rate : 24000;
     orion_config_copy_str(ORION_CFG_VISION_MODE, c->vision_mode, sizeof(c->vision_mode), "tool");
 
-    ESP_LOGI(TAG, "llm %s at %s, key %s", c->llm.model, c->llm.origin,
-             c->llm.auth[0] ? "set" : "none");
+    ESP_LOGI(TAG, "llm %s at %s, key %s%s%s%s", c->llm.model, c->llm.origin,
+             c->llm.auth[0] ? "set" : "none", c->llm_no_temp ? ", no temperature" : "",
+             c->llm_mct ? ", max_completion_tokens" : "", c->llm_think == LLM_THINK_DISABLED ? ", thinking off" : "");
     ESP_LOGI(TAG, "stt %s %s at %s, key %s", c->stt.prov == CLOUD_PROV_FISH ? "fish" : "openai",
              c->stt.model, c->stt.origin, c->stt.auth[0] ? "set" : "none");
     ESP_LOGI(TAG, "tts %s %s voice %s at %s, %u Hz, key %s",
@@ -181,7 +216,28 @@ esp_err_t cloud_cfg_load(void)
              c->tts.voice[0] ? c->tts.voice : "(default)", c->tts.origin,
              (unsigned) c->tts_rate, c->tts.auth[0] ? "set" : "none");
     ESP_LOGI(TAG, "pc brain %s", c->pc.url[0] ? c->pc.origin : "off");
+    ESP_LOGI(TAG, "hub brain %s%s%s", c->hub.url[0] ? c->hub.origin : "off",
+             c->hub.url[0] && c->hub_name[0] ? ", " : "", c->hub.url[0] ? c->hub_name : "");
     return ESP_OK;
+}
+
+void cloud_cfg_llm_learned(bool no_temp, bool mct)
+{
+    if (!s_cfg) return;
+    if (no_temp) s_cfg->llm_no_temp = true;
+    if (mct) s_cfg->llm_mct = true;
+    ESP_LOGW(TAG, "%s refuses %s: left out from now on", s_cfg->llm.model,
+             no_temp ? "temperature" : "max_tokens, using max_completion_tokens");
+}
+
+void cloud_cfg_llm_thinks(const char *msg)
+{
+    if (!s_cfg) return;
+    s_cfg->llm_think = s_cfg->llm_think == LLM_THINK_DISABLED && strstr(msg, "between_tools")
+                           ? LLM_THINK_BETWEEN_TOOLS
+                           : LLM_THINK_ROOM;
+    ESP_LOGW(TAG, "%s refuses thinking off that way: %s", s_cfg->llm.model,
+             s_cfg->llm_think == LLM_THINK_BETWEEN_TOOLS ? "using between_tools" : "it thinks, with room for it");
 }
 
 const cloud_cfg_t *cloud_cfg(void)
@@ -207,6 +263,7 @@ const cloud_stage_cfg_t *cloud_slot_stage(cloud_slot_t slot)
     case CLOUD_SLOT_STT: return &s_cfg->stt;
     case CLOUD_SLOT_PC:  return &s_cfg->pc;
     case CLOUD_SLOT_PHONE: return cloud_phone_stage();
+    case CLOUD_SLOT_HUB: return &s_cfg->hub;
     default:             return &s_cfg->tts;
     }
 }

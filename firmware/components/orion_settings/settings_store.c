@@ -16,7 +16,7 @@ static const char *TAG = "orion_settings";
 #define DEFAULT_LLM     "google/gemma-4-31B-it-turbo"
 #define DEFAULT_STT     "transcribe-1"
 #define DEFAULT_ASR     "Qwen/Qwen3-ASR-1.7B"
-#define DEFAULT_TTS     "s2.1-pro-free"
+#define DEFAULT_TTS     "drama-3"
 #define DEFAULT_VOICE   "9a68c1d739134940a4297c996c5ca6a1"   // Orion Voice
 
 // Reads key, then the version 1 key, then the default.

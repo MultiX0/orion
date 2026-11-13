@@ -38,7 +38,7 @@ class BoardConfig {
       'fish': <String, dynamic>{
         'api_key': null,
         'voice_id': '9a68c1d739134940a4297c996c5ca6a1',
-        'tts_model': 's2.1-pro-free',
+        'tts_model': 'drama-3',
       },
     } else ...<String, dynamic>{
       'llm': <String, dynamic>{
@@ -57,7 +57,7 @@ class BoardConfig {
         'provider': 'fish',
         'base_url': null,
         'api_key': null,
-        'model': 's2.1-pro-free',
+        'model': 'drama-3',
         'voice': '9a68c1d739134940a4297c996c5ca6a1',
       },
     },

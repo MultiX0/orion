@@ -121,6 +121,7 @@ sse_kind_t sse_parse_line(sse_t *s, const char *line, char *text, size_t text_le
 {
     text[0] = '\0';
     if (strncmp(line, "data:", 5) != 0) {
+        if (line[0] == ':') s->quiet = true;
         return SSE_NONE;              // comments, "event:" lines, blank keep alives
     }
     const char *json = line + 5;
@@ -135,6 +136,11 @@ sse_kind_t sse_parse_line(sse_t *s, const char *line, char *text, size_t text_le
     }
     if (strstr(json, "\"choices\":[]")) {
         return SSE_NONE;              // the usage frame
+    }
+    // An Orion Hub marks an answer that asks the user something, so the board
+    // listens for the reply without the wake word (hub/README.md).
+    if (strstr(json, "\"orion_listen\":true")) {
+        s->listen = true;
     }
 
     char finish[16];
@@ -170,6 +176,10 @@ sse_kind_t sse_feed(sse_t *s, const char **data, size_t *n, char *text, size_t t
             continue;
         }
         if (ch != '\n') {
+            // A comment line (": working") starts: the sender paused. The hub's
+            // keep-alive fills the 128 byte read it starts in, so this byte
+            // arrives at once; the line's newline may wait for the next write.
+            if (s->len == 0 && ch == ':') s->quiet = true;
             if (s->len + 1 < s->cap) {
                 s->line[s->len++] = ch;
             }

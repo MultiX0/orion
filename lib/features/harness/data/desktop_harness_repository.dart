@@ -37,6 +37,7 @@ class DesktopHarnessRepository implements HarnessRepository {
     PcMemory? memory,
     Future<List<String>> Function()? desktopState,
     this.allowInbound,
+    Map<String, dynamic>? Function(int port)? identity,
     int port = ToolServer.defaultPort,
   }) {
     final pcBrain = brain == null
@@ -57,6 +58,7 @@ class DesktopHarnessRepository implements HarnessRepository {
       agentLogs: _agentLogs.stream,
       token: () => pairingToken,
       chat: pcBrain?.open,
+      identity: identity,
       port: port,
     );
   }

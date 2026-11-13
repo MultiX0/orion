@@ -156,12 +156,22 @@ void main() {
       ),
     );
     // The log is written without being awaited, so give it a moment.
+    // A line read while it is being written is cut short: wait for a whole one.
     final file = File('${temp.path}/tools.jsonl');
-    for (var i = 0; i < 40 && !file.existsSync(); i++) {
+    Map<String, dynamic>? last;
+    for (var i = 0; i < 40 && last == null; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 50));
+      if (!file.existsSync()) continue;
+      final lines = await file.readAsLines();
+      try {
+        last = lines.isEmpty
+            ? null
+            : jsonDecode(lines.last) as Map<String, dynamic>;
+      } on FormatException {
+        last = null;
+      }
     }
-    final last =
-        jsonDecode((await file.readAsLines()).last) as Map<String, dynamic>;
+    if (last == null) fail('the tool log never got a whole line');
     expect(last['approval'], 'auto');
     expect(last['approved_by'], 'policy');
   });

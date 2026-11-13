@@ -53,7 +53,7 @@ void main() {
     expect(loaded.pairedDevice, settings.pairedDevice);
     expect(loaded.selectedProviderId, 'deepinfra');
     expect(loaded.providers.single.selectedModel, contains('Llama'));
-    expect(loaded.fish?.ttsModel, 's2.1-pro-free');
+    expect(loaded.fish?.ttsModel, 'drama-3');
   });
 
   test('the api key never reaches the settings blob', () async {

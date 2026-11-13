@@ -14,6 +14,7 @@ import '../data/device_settings_notifier.dart';
 import 'app_settings_card.dart';
 import 'board_card.dart';
 import 'device_settings_card.dart';
+import 'hub_card.dart';
 
 /// Grouped cards: device, board, app. No dense list.
 class SettingsScreen extends ConsumerWidget {
@@ -59,6 +60,8 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: Space.lg),
                           BoardCard(settings: value),
+                          const SizedBox(height: Space.lg),
+                          const HubCard(),
                         ],
                       ),
                       _ when offline => EmptyState(

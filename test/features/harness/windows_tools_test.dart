@@ -143,14 +143,26 @@ void main() {
     const runner = SystemProcessRunner();
     final started = DateTime.now();
     final result = await runner.run(
-      Platform.isWindows ? 'cmd' : 'sh',
-      Platform.isWindows
-          ? <String>['/c', 'pause']
-          : <String>['-c', 'read line'],
+      Platform.isWindows ? 'ping' : 'sleep',
+      Platform.isWindows ? <String>['-n', '30', '127.0.0.1'] : <String>['30'],
       timeout: const Duration(milliseconds: 400),
     );
     expect(result.ok, isFalse);
     expect(result.stderr, contains('timed out'));
     expect(DateTime.now().difference(started).inSeconds, lessThan(5));
+  });
+
+  test('a child that reads stdin gets EOF instead of hanging', () async {
+    const runner = SystemProcessRunner();
+    final started = DateTime.now();
+    final result = await runner.run(
+      Platform.isWindows ? 'cmd' : 'sh',
+      Platform.isWindows
+          ? <String>['/c', 'pause']
+          : <String>['-c', 'read line'],
+      timeout: const Duration(seconds: 20),
+    );
+    expect(result.stderr, isNot(contains('timed out')));
+    expect(DateTime.now().difference(started).inSeconds, lessThan(10));
   });
 }

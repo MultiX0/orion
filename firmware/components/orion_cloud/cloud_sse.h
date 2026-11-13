@@ -20,6 +20,8 @@ typedef struct {
     bool tool;
     char tool_name[24];
     char finish[16];        // finish_reason of the last frame that had one
+    bool listen;            // a brain's "orion_listen": true, the answer asked the user something
+    bool quiet;             // a ": ..." keep-alive came after the last text: the sender paused
 } sse_t;
 
 void sse_init(sse_t *s, char *line_buf, size_t cap);

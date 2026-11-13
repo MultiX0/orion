@@ -49,6 +49,9 @@ class SystemProcessRunner implements ProcessRunner {
         environment: environment,
         runInShell: shell,
       );
+      // Nothing is ever written to it. A child that reads stdin gets EOF at
+      // once instead of waiting until the timeout.
+      process.stdin.close().ignore();
       final out = StringBuffer();
       final err = StringBuffer();
       final reading = <Future<void>>[

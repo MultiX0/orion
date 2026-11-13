@@ -26,6 +26,8 @@ typedef enum {
     EV_SETTINGS,    // a stored setting changed: the wake word switch
     EV_SAY,         // the app: speak the pending text, no model
     EV_PROGRESS,    // the reply stream is alive: the deadline starts again
+    EV_HUB_INFO,    // the Orion Hub client's state changed: menu card and hint
+    EV_QUIET,       // a follow-up heard nobody: back to idle without the "repeat" earcon
 } orion_event_t;
 
 typedef enum {

@@ -6,6 +6,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-11
+
+Firmware 1.1.0 (tag `fw-v1.1.0`) and app 1.1.0 (tag `v1.1.0`), and the first Orion Hub (0.1.1, in `hub/`).
+
+### Firmware 1.1.0
+
+#### Added
+
+- Orion Hub: the board finds hubs on the network, pairs with one, and sends every question to the hub first. The first device a hub sees becomes its owner; any later one shows a four digit code on its screen until the owner approves it. The menu's first card shows the hub with a search, connect or disconnect button. The app does the same through `GET` and `POST /api/hub`, and the console through `hub`.
+- Orion Link: every device has a permanent id and answers `GET /.well-known/orion`. The board's mDNS record and beacon carry its `id` and `kind`. When the hub's address changes, the board finds the same id again (mDNS, then a sweep of its /24 on port 8780), and it learns where the PC and the phone are from their links. See `docs/ORION_LINK.md`.
+- A brain can ask for the reply without the wake word: when an answer ends in a question, the board plays the chime and listens at once.
+- Any provider can be the board's own model. Each request carries what that provider takes: no `temperature` for Anthropic and OpenAI, `max_completion_tokens` for OpenAI, thinking off for Claude. Anything else is learned from the provider's first error.
+- Console: `power watch` and `power ilim` for the charger, `spk supply` and `spk prio` for the speaker.
+
+#### Changed
+
+- The voice is Fish Drama 3 (`drama-3`) with the Orion Voice by default. It bills Fish API credit; `s2.1-pro-free` can still be picked in the app.
+- The camera is used only when you ask for it in so many words ("take a photo", "look at this", "what do you see"). The model no longer decides to look on its own.
+- Steadier sound on a weak USB port: the charger's input limit is 1500 mA instead of 500 and stays set, the voice follows the supply, Wi-Fi transmits more quietly while Orion speaks, and the audio writer runs at a higher priority while playing.
+- Answers from the hub are spoken in whole bursts, one text to speech request each, instead of a piece at every comma.
+- Playing a reply counts as progress, so a long spoken answer no longer runs into the 30 s turn deadline.
+- The screen never shows voice cues, tokens or markers from a reply.
+
+### App 1.1.0
+
+#### Added
+
+- An Orion Hub card in Settings: find a hub through the board, connect, see the approval code, or forget the hub.
+- Orion Link ids for the desktop app (`pc-...`) and the phone app (`phone-...`), served on the brain's port. When the board's address changes, the app finds the board again by its id.
+- Anthropic and OpenAI work as the PC's and the phone's model, with the request fields each one takes.
+
+#### Changed
+
+- The PC agent has full control of the computer: DeepSeek Harness 0.2.2-rc.1, pinned, with Playwright MCP (a visible Edge on Windows) for the web, winapp MCP for Windows applications, and Cua Driver on macOS and Linux. The task reaches it on stdin, and its settings are the headless profile's own patch. Whether a task runs at all is still the PC control choice: off, ask me first, or act on your own.
+- The Windows setup program carries Node.js 24 for the PC agent, so it works on a PC that has never had Node. It is not added to the PATH and is removed with Orion. The zip has the same Node in `node\`.
+- Fish Drama 3 is the default voice model, and the Fish credit note says what uses credit.
+
+### Orion Hub 0.1.1
+
+- A voice agent for a home server, in `hub/`: DeepSeek Harness on Claude Haiku 5.5 with Docker, network scans, SSH logins kept in a local vault, a memory file, and a log of every action. One Docker Compose service, with images for `linux/amd64` and `linux/arm64` on Docker Hub as `multix00/orion-hub`. See `hub/README.md`.
+- The first device a new hub sees becomes its owner; every later one waits for the owner's approval, even after all of them were removed. Passwords said for an SSH login are kept out of the hub's logs, which only root can read.
+- When the hub cannot answer before anything was said, the board hands the question to its next brain.
+
+### Known issues
+
+- With Drama 3 as the default voice, a Fish account with no API credit cannot speak. Pick `s2.1-pro-free` in the app for free speech; hearing still needs credit.
+- The board has no battery. On a weak USB port the voice can still break up; a strong 5 V charger fixes it.
+- When Orion Link finds the board or the hub again at a new address, it trusts the device that answers with the right id. A device on the same network that pretends to be one of them can receive that pairing's token. See `SECURITY.md`.
+
 ## [1.0.0] - 2026-09-24
 
 The first public release: firmware 1.0.0 for the LilyGO T-CameraPlus-S3 (tag `fw-v1.0.0`), and app 1.0.0 with builds for Android and Windows (tag `v1.0.0`). iOS is set up in the same code but has not been built or tried on a device yet. Website: https://www.joinorion.io.
@@ -62,5 +111,6 @@ The first public release: firmware 1.0.0 for the LilyGO T-CameraPlus-S3 (tag `fw
 - The full image clears the board's settings, so a board flashed with it starts Bluetooth setup again. The separate images update a board and keep them.
 - The Android APK is signed with a development key, so a later build signed with a release key may need this one uninstalled first. The Windows app is not code signed, so SmartScreen warns on first run.
 
-[Unreleased]: https://github.com/MultiX0/orion/compare/fw-v1.0.0...HEAD
+[Unreleased]: https://github.com/MultiX0/orion/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/MultiX0/orion/releases/tag/v1.1.0
 [1.0.0]: https://github.com/MultiX0/orion/releases/tag/fw-v1.0.0

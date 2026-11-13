@@ -12,7 +12,7 @@ flowchart LR
   CH -- pieces --> TTSW[TTS worker]
   TTSW -- PCM --> RING[(1.5 MB ring<br/>PSRAM)]
   RING --> SPK[Speaker]
-  LLMW -. look tool .-> CAM[Camera] -. JPEG .-> LLMW
+  LLMW -. camera phrase .-> CAM[Camera] -. JPEG .-> LLMW
 ```
 
 - `orion_turn.c` records, streams the audio to speech to text while the user talks, then calls `orion_cloud_reply`, which thinks and speaks in one call and returns when the last PCM has gone to the speaker.
@@ -68,24 +68,24 @@ Recognition of mixed Arabic and English is poor on every engine: English words c
 The board builds an OpenAI chat request:
 
 - The system prompt from `/assets/system_prompt.txt` (a built-in fallback if the assets partition is missing), plus the local date and time with the part of the day spelled out, in the form "Friday 02 January 2026, 11:40 at night (23:40)". Given "23:40" alone the model said "the twenty first hour". Empty until the clock has synced.
-- When the board answers itself, one more note: that no PC or phone is connected, or that the connected one did not answer, so it must not claim to have opened, closed or played anything. Asked to close Spotify with no PC, it used to say it had.
+- When the board answers itself, one more note: that no Orion Hub, PC or phone is connected, or that the connected one did not answer, so it must not claim to have opened, closed or played anything. Asked to close Spotify with no PC, it used to say it had.
 - The prompt's `<fish>` section, the voice tag rules, only when the text to speech is Fish. With any other voice the section is cut out and a line against square brackets is added instead (`cloud_prompt_refresh`, run at boot and on every reload).
 - The last six exchanges, held in RAM (`CLOUD_HISTORY_TURNS`).
-- The question, and the `look` tool.
-- `"stream": true`, `"max_tokens": 200`, `"temperature": 0.6`.
+- The question, with the picture when it asked for the camera.
+- `"stream": true`, and for most providers `"max_tokens": 200` and `"temperature": 0.6`. Anthropic gets no temperature and thinking off; OpenAI gets no temperature and `max_completion_tokens` 2000, room for a reasoning model to think. The rules per provider are in [PROVIDERS.md](PROVIDERS.md).
 
 The stream is read **128 bytes at a time**. `esp_http_client_read` does not return until it has every byte asked for or the response ends: asked for 2 KB, a short answer's first token sat in the buffer until its last one arrived. One SSE event is about 300 bytes, so 128 returns per token. Every read counts as progress and restarts the board's 30 s deadline (at most every 2 s), which is what lets a PC brain work on a task for a minute.
 
-The SSE parser and the request writer (`cloud_sse.c`, `cloud_json.c`) do not use cJSON, whose small nodes would all land in internal RAM. They handle escaped Unicode, a tool call in the deltas and DeepInfra's final usage frame with an empty `choices`. Gemma's first-token time with the 3.2 KB prompt and the look tool is about 0.4 to 1.5 s; prompt size in this range costs nothing measurable (doubling it to 1600 tokens moved the median by about 100 ms).
+The SSE parser and the request writer (`cloud_sse.c`, `cloud_json.c`) do not use cJSON, whose small nodes would all land in internal RAM. They handle escaped Unicode, a tool call in the deltas and DeepInfra's final usage frame with an empty `choices`. Gemma's first-token time with the 3.2 KB prompt is about 0.4 to 1.5 s; prompt size in this range costs nothing measurable (doubling it to 1600 tokens moved the median by about 100 ms).
 
 ### The camera
 
-- A question plainly about what is in front of the board takes the picture **before** the model runs: "what do you see", "what is this", "read this", "in front of you", "شو هاد", "ما هذا", "ماذا ترى", "قدامك", "أمامك" and a few dozen more, Latin letters matched without case. This saves the round trip in which the model decides to call `look`, which was most of a second. First word 1.7 to 2.1 s alone, 3.2 to 4 s through the PC.
-- Anything else offers the `look` tool. If the model calls it, the stream is read to its end, a 640x480 JPEG is taken, and a second request streams the answer with the image attached and no tools.
+- The camera is used only when the question asks for it in so many words: "take a photo", "look at this", "what do you see", "in front of you", "read this for me", "صوّر", "خذ صورة", "شوف هاد", "ماذا ترى", "قدامك", "أمامك" and a few dozen more, matched only where a word starts, Latin letters without case. The picture is taken **before** the model runs and goes with the question as an image. First word 1.7 to 2.1 s alone, 3.2 to 4 s through the PC.
+- The model is never offered a tool to look on its own: with one, it took pictures nobody asked for.
 - The app's "Ask about this" always takes the picture first.
 - The JPEG is copied before the model reads it, so the camera is free for a viewer's stream.
 
-`vision_mode` in NVS changes this: `tool` (default), `keyword` (picture first on the phrases only, no tool), `off`.
+`vision_mode` in NVS: `off` turns the camera phrases off too; any other value (`keyword`, or `tool` from older settings) means the phrases above.
 
 ## The chunker
 
@@ -102,7 +102,7 @@ The SSE parser and the request writer (`cloud_sse.c`, `cloud_json.c`) do not use
 
 ### Fish
 
-`POST https://api.fish.audio/v1/tts`, model in the `model` header (`s2.1-pro-free` by default), JSON body:
+`POST https://api.fish.audio/v1/tts`, model in the `model` header (`drama-3` by default), JSON body:
 
 ```json
 { "text": "...", "reference_id": "9a68c1d739134940a4297c996c5ca6a1", "format": "pcm", "sample_rate": 32000, "latency": "balanced" }
@@ -138,7 +138,7 @@ Fish also has a streaming text to speech WebSocket (`wss://api.fish.audio/v1/tts
 
 ## Extended brains
 
-`cloud_pc.c`. With PC control on (`pc_enabled`, `pc_url`, `pc_token`) or a phone linked with a `brain`, the reply goes to that brain's `POST /v1/chat/completions` first, with the same body the board would send its own model. The PC is checked with `GET /tools` (3 s timeout) on every prewarm; a request to a brain may take up to 25 s before its first byte, inside the 30 s turn. A brain that fails before a word is spoken is marked down and the same turn goes to the next: PC, then phone, then the board's own model. The rules a brain's stream must keep are in [DEVICE_PROTOCOL.md](DEVICE_PROTOCOL.md#board-to-brain), and what the brain does in [HARNESS.md](HARNESS.md).
+`cloud_pc.c`. With an Orion Hub paired (`hub_url`, `hub_token`), PC control on (`pc_enabled`, `pc_url`, `pc_token`) or a phone linked with a `brain`, the reply goes to that brain's `POST /v1/chat/completions` first, with the same body the board would send its own model. The hub and the PC are checked with `GET /tools` (3 s timeout) on every prewarm, a hub that missed its check at most every 30 s; a request to a brain may take up to 25 s before its first byte, inside the 30 s turn. A brain that fails before a word is spoken is marked down and the same turn goes to the next: hub, then PC, then phone, then the board's own model. From the hub the board speaks whole bursts rather than sentence pieces, and listens again without the wake word when an answer asks something (`orion_listen`). The rules a brain's stream must keep are in [DEVICE_PROTOCOL.md](DEVICE_PROTOCOL.md#board-to-brain), what the PC and phone do in [HARNESS.md](HARNESS.md), and the hub in [hub/README.md](../hub/README.md).
 
 ## Reload and test
 

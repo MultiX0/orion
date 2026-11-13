@@ -89,6 +89,8 @@ void ui_menu_button_show(bool on);
 void ui_menu_set_net(bool online, const char *ssid, const char *ip, int rssi);
 void ui_menu_set_pc(bool found, bool connected, const char *name, const char *ip);
 void ui_menu_on_pc_refresh(ui_tap_cb_t cb, void *ctx);
+void ui_menu_set_hub(ui_hub_t state, const char *name, const char *ip, const char *code);
+void ui_menu_on_hub_action(ui_tap_cb_t cb, void *ctx);
 void ui_menu_scroll(int32_t y);
 
 // Setup view for Bluetooth Wi-Fi provisioning.

@@ -303,7 +303,7 @@ static int cmd_selftest(int argc, char **argv)
 {
     (void) argc;
     (void) argv;
-    const int failed = chunker_selftest() + sse_selftest() + prompt_selftest();
+    const int failed = chunker_selftest() + sse_selftest() + prompt_selftest() + screen_selftest();
     printf("cloud_selftest %s\n", failed ? "FAILED" : "passed");
     return failed ? 1 : 0;
 }

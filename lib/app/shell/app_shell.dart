@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/platform/platform_info.dart';
 import '../../core/theme/tokens.dart';
+import '../../features/device/data/device_providers.dart';
 import 'desktop_rail.dart';
 import 'mobile_nav_bar.dart';
 
@@ -17,6 +18,8 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final platform = ref.watch(platformInfoProvider);
+    // Keeps following the board when its address changes (Orion Link).
+    ref.watch(boardLocatorProvider);
     final location = GoRouterState.of(context).uri.path;
     if (platform.isMobile) {
       return Scaffold(

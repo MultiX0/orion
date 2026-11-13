@@ -34,6 +34,10 @@ esp_err_t orion_net_wait_up(uint32_t timeout_ms);
 
 bool orion_net_is_up(void);
 int orion_net_rssi(void);
+
+// Lower Wi-Fi transmit power while the speaker plays (net_state.c): less
+// current at once on a weak USB port. Ignored with a weak signal.
+void orion_net_set_quiet_tx(bool quiet);
 uint32_t orion_net_disconnect_count(void);
 esp_err_t orion_net_ip(char *out, size_t out_len);
 

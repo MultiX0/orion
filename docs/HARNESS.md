@@ -51,7 +51,7 @@ The board's own system prompt arrives already cut for its text to speech: with F
 - The apps with a window open right now (up to 15), the actions of the last 6 hours with how long ago, and the last 10 turns of the last 12 hours from the memory, with their tool calls replayed as tool calls.
 - A last line naming the language to answer in, taken from the letters of what was heard: any Arabic words make it Arabic.
 
-The tools are the PC's own (below), the web tools, and the board's `look`, which goes back to the board as a normal tool call so it takes the picture.
+The tools are the PC's own (below) and the web tools. The camera is the board's: when a question asks for it in so many words, the board takes the picture itself and sends it with the question as an image.
 
 How a turn runs:
 
@@ -121,16 +121,37 @@ Three rules in the context each come from a measured failure: every action needs
 | `fetch_page` | one page as plain text |
 | `weather` | Open-Meteo, now and the next two days, for a named place in English letters or where the device is. About 1 s. A weather question through web search had come back empty after 17 s. |
 
-### Agent tasks (optional)
+### The PC agent (agent_task)
 
-`agent_task` (tier `always`) hands a multi-step task to DeepSeek Harness (`dsh`), an open source agent runtime, when Node and dsh are installed. It is offered only when the probe finds them, and the app never depends on it to start.
+`agent_task` hands a task to DeepSeek Harness (`dsh`), an open source agent runtime, with full control of the computer: it sees the screen and drives the mouse and keyboard in any application, runs commands and downloads files, without asking. Whether a task runs at all is the approval mode's decision (`pc.approval`): with `auto` it runs the moment it arrives. It needs Node and is offered only when the probe finds dsh; the app never depends on it to start. The tool list never waits for the probe: until it answers (on a new PC the first run downloads dsh, about three minutes) `agent_task` is not offered, and a probe that found no dsh is asked again after five minutes.
 
-- Needs Node `^22.19.0` or `>=24`. The probe runs `node --version`, then `npx -y @deepseek-ai/dsh --version` with 60 s (a first run downloads the package). A timeout means "not available".
-- Runs `npx -y @deepseek-ai/dsh --profile headless "<task>"` in `~/Orion/agent` with `DSH_HOME=~/Orion/agent/.dsh`, `DSH_PERMISSION_MODE=workspace-write` and `DSH_TELEMETRY_MODE=DISABLED`. It never touches the user's own `~/.dsh`.
-- `DshConfigWriter` writes `settings.yaml` (the provider and model chosen in the app) and a `.env` with `DP_ORION_KEY` (mode 0600 on POSIX). The key is never a command-line argument.
-- To watch one run end to end: `DP_ORION_KEY=<key> dart run tool/dsh_e2e.dart --base-url https://api.deepinfra.com/v1/openai --model deepseek-ai/DeepSeek-V3.2`. It asks dsh to create `hello.txt` in the agent folder and checks it landed (about 16 s).
+What the agent gets (`DshConfigWriter`, `DshRuntime`):
 
-With the thinking model driving the UI tools, most tasks no longer need dsh.
+| | |
+|---|---|
+| dsh | `@deepseek-ai/dsh@0.2.2-rc.1`, pinned: a plugin built for another dsh is refused at install, and unpinned `npx -y @deepseek-ai/dsh` failed on Windows ("'dsh' is not recognized") where the pinned one ran |
+| Browsers | Playwright MCP (`@playwright/mcp@0.0.84`), a visible Edge on Windows, Chrome elsewhere, acting on the page's own elements; files it saves go to `~/Downloads` |
+| Windows applications | winapp MCP (`winapp-mcp@2.0.0`), UI Automation: launch or attach, snapshot, click, type and read controls by automation id |
+| macOS and Linux applications | Cua Driver (`@deepseek-ai/dsh-experimental-computer-use-cua-driver-native`), installed into the profile with `dsh plugin add` on the first task |
+| Access | `--permission-mode danger-full-access --approval-policy never`, working in the user's home folder |
+| Model | the provider and model chosen in the app. Anthropic and OpenAI use dsh's own routes; anything else an OpenAI style route declared as seeing images |
+
+- The configuration is the headless profile's own patch layer, `~/Orion/agent/.dsh/profiles/headless/cordis.patch.yml`. A `settings.yaml` was not applied reliably: with a profile patch present, the agent fell back to DeepSeek's own model.
+- The task goes to dsh on stdin (`-`), never on the command line: on Windows `npx` runs through cmd, which cut the task at its first newline and would act on `&`, `%` and quotes in it.
+- Every task starts with a short preamble: act without asking, pick the tool for the job, check each step, and answer in one or two spoken sentences.
+- The key is in `.env` as `DP_ORION_KEY` (mode 0600 on POSIX), never a command-line argument.
+- Every server and plugin is pinned to an exact version. The packages they depend on are resolved by npm, within their own ranges, the first time a PC fetches them.
+
+Measured on Windows 11 with Claude Haiku 5.5 (`tool/agent_desktop_check.dart` runs one task through `DshRuntime` exactly as the app does):
+
+| Task | Result |
+|---|---|
+| "Open a web browser, go to the official Debian website, find the Debian 13 netinst ISO for amd64 and download it" | the 793 MB ISO in `~/Downloads`, through the real Debian pages |
+| "Download the SHA256SUMS file of the Debian 13 netinst images" | 31 s |
+| "Open Calculator, compute 12 times 12 by clicking its buttons, read the result, close it" | 144, by automation id, 44 s |
+| "Open Notepad, type: Hello from Orion & 100% \"quoted\"" | typed exactly as written |
+
+Cua Driver alone, tried first on Windows, could act too (the Debian download in 42 s), but its window text carries no snapshot id, so element clicks failed and the model fell back to pixels, and closing a window with an unsaved document did not work. winapp's controls by automation id and Playwright's page elements were steadier.
 
 ### On Linux
 

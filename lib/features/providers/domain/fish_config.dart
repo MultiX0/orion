@@ -10,13 +10,19 @@ abstract class FishConfig with _$FishConfig {
     String? apiKey,
     String? voiceId,
 
-    /// The free tier of the S2.1 Pro engine. The paid s2.1-pro needs API
-    /// credit on the Fish account, which a fresh key does not have.
-    @Default('s2.1-pro-free') String ttsModel,
+    /// Fish Drama 3, paid: it needs API credit on the Fish account.
+    /// s2.1-pro is the faster paid one; s2.1-pro-free costs nothing.
+    @Default('drama-3') String ttsModel,
   }) = _FishConfig;
 
   factory FishConfig.fromJson(Map<String, dynamic> json) =>
       _$FishConfigFromJson(json);
 
-  static const ttsModels = ['s2.1-pro-free', 's2.1-pro', 's2-pro', 's1'];
+  static const ttsModels = [
+    'drama-3',
+    's2.1-pro',
+    's2.1-pro-free',
+    's2-pro',
+    's1',
+  ];
 }

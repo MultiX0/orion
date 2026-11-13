@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# orion-net: what is on the local network, in short lines a voice assistant can summarize.
+#   orion-net info                 this hub's addresses and gateway
+#   orion-net scan [--ports]       devices on the LAN (address, name, vendor), optionally common open ports
+#   orion-net find <name|address>  one device: is it up, its name, its open ports
+# ORION_HUB_LAN_CIDR overrides the network to scan (for a hub whose own address is not on the LAN).
+set -uo pipefail
+
+own_cidrs() {
+  if [ -n "${ORION_HUB_LAN_CIDR:-}" ]; then echo "$ORION_HUB_LAN_CIDR"; return; fi
+  ip -4 -o addr show scope global 2>/dev/null \
+    | awk '$2 !~ /^(docker|br-|veth|cni|flannel|virbr|lo)/ {print $4}' \
+    | while read -r a; do
+        ip="${a%/*}"; bits="${a#*/}"
+        # Never sweep more than a /24: a big subnet would take minutes.
+        if [ "$bits" -lt 24 ]; then bits=24; fi
+        echo "$ip/$bits"
+      done
+}
+
+info() {
+  echo "hub addresses:"
+  ip -4 -o addr show scope global 2>/dev/null | awk '{print "  " $2 " " $4}'
+  echo "default gateway: $(ip route 2>/dev/null | awk '/^default/ {print $3; exit}')"
+  echo "lan scanned by default: $(own_cidrs | tr '\n' ' ')"
+}
+
+# nmap's normal output, turned into one line per host: address, name, vendor, ports.
+summarize() {
+  awk '
+    /^Nmap scan report for / {
+      if (addr != "") print_host()
+      line = substr($0, 22); name = ""; addr = line
+      if (match(line, /\(([0-9.]+)\)$/)) { addr = substr(line, RSTART + 1, RLENGTH - 2); name = substr(line, 1, RSTART - 2) }
+      vendor = ""; ports = ""; next
+    }
+    /^MAC Address:/ { if (match($0, /\(.*\)/)) vendor = substr($0, RSTART + 1, RLENGTH - 2); next }
+    /^[0-9]+\/(tcp|udp) +open/ { split($1, p, "/"); ports = ports (ports == "" ? "" : ",") p[1] "(" $3 ")"; next }
+    END { if (addr != "") print_host() }
+    function print_host() {
+      out = addr
+      if (name != "") out = out "  name=" name
+      if (vendor != "" && vendor != "Unknown") out = out "  vendor=" vendor
+      if (ports != "") out = out "  open=" ports
+      print out
+    }'
+}
+
+# Adds name= to lines that have none, from reverse DNS, all hosts at once, one second each at most.
+add_names() {
+  local lines
+  lines=$(cat)
+  [ -n "$lines" ] || return 0
+  local names
+  names=$(awk '$0 !~ /name=/ {print $1}' <<<"$lines" \
+    | xargs -r -P 32 -I{} sh -c 'n=$(timeout 1 getent hosts {} 2>/dev/null | awk "{print \$2; exit}"); [ -n "$n" ] && echo "{} $n"' 2>/dev/null)
+  awk -v names="$names" '
+    BEGIN { n = split(names, rows, "\n"); for (i = 1; i <= n; i++) { split(rows[i], f, " "); if (f[2] != "") nm[f[1]] = f[2] } }
+    { if ($0 !~ /name=/ && ($1 in nm)) { rest = substr($0, length($1) + 1); print $1 "  name=" nm[$1] rest } else print }
+  ' <<<"$lines"
+}
+
+scan() {
+  local ports=0
+  [ "${1:-}" = "--ports" ] && ports=1
+  local cidrs
+  cidrs=$(own_cidrs)
+  if [ -z "$cidrs" ]; then echo "orion-net: no LAN address found (set ORION_HUB_LAN_CIDR)" >&2; exit 1; fi
+  for c in $cidrs; do
+    # ICMP echo only (-PE). On a LAN the hub sits on directly, nmap also ARP-pings as root, so devices
+    # that ignore ping are still found. TCP probes are left out on purpose: behind NAT (Docker Desktop)
+    # the NAT answers them for every address and every host looks up.
+    local hosts
+    hosts=$(timeout 40 nmap -sn -n -PE --max-retries 1 --host-timeout 3s "$c" 2>/dev/null | summarize | add_names)
+    local n
+    n=$(grep -c . <<<"$hosts")
+    echo "network $c: $n devices answered"
+    if [ "$n" -ge 250 ]; then
+      echo "warning: every address answered, so this hub cannot see the LAN directly (it is behind NAT,"
+      echo "for example Docker Desktop). The count is not real. Run the hub with network_mode: host on Linux."
+      continue
+    fi
+    if [ $ports -eq 1 ] && [ "$n" -gt 0 ]; then
+      # Common ports on the hosts that are up only, not on the whole range.
+      awk '{print $1}' <<<"$hosts" \
+        | timeout 60 xargs nmap -n -T4 --top-ports 30 --open --max-retries 1 --host-timeout 8s 2>/dev/null \
+        | summarize | add_names
+    else
+      echo "$hosts"
+    fi
+  done
+}
+
+find_one() {
+  local q="$1"
+  if [[ "$q" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    if ! timeout 5 ping -c 1 -W 2 "$q" >/dev/null 2>&1; then echo "$q does not answer ping (it may still be up and block ping)"; fi
+    timeout 40 nmap -T4 -F -Pn --max-retries 1 --host-timeout 30s "$q" 2>/dev/null | summarize
+    return
+  fi
+  # A name: DNS or mDNS first, then names and vendors seen on the LAN.
+  local resolved
+  resolved=$(getent hosts "$q" "$q.local" 2>/dev/null | awk '{print $1; exit}')
+  if [ -n "$resolved" ]; then
+    echo "$q resolves to $resolved"
+    timeout 40 nmap -T4 -F -Pn --max-retries 1 --host-timeout 30s "$resolved" 2>/dev/null | summarize
+    return
+  fi
+  local hits
+  hits=$(scan | grep -i -- "$q" || true)
+  if [ -n "$hits" ]; then echo "$hits"; else echo "no device matching '$q' answered on the LAN"; fi
+}
+
+case "${1:-}" in
+  info) info ;;
+  scan) shift; scan "$@" ;;
+  find) shift; [ $# -ge 1 ] || { echo "usage: orion-net find <name|address>" >&2; exit 2; }; find_one "$1" ;;
+  *) echo "usage: orion-net info | scan [--ports] | find <name|address>" >&2; exit 2 ;;
+esac

@@ -37,6 +37,8 @@ static const chunk_case_t CASES[] = {
      {"The capital of France is Paris,", "and it is famous for the Eiffel Tower."}},
     {"It will be sunny tomorrow in Irbid.<turn|>",
      {"It will be sunny tomorrow in Irbid."}},
+    {"|speaking| Sure, I can help with that.",
+     {"Sure, I can help with that."}},
     {"[chuckling] That is a classic excuse, but I believe you, and I think so too.",
      {"[chuckling] That is a classic excuse,", "but I believe you, and I think so too."}},
     {"Why did the man put his clock in the bank? [pause] He wanted to save time! [laugh]",
@@ -182,5 +184,34 @@ int prompt_selftest(void)
     }
     ESP_LOGI(TAG, "prompt %d of %u passed", (int) (sizeof(cases) / sizeof(cases[0])) - failed,
              (unsigned) (sizeof(cases) / sizeof(cases[0])));
+    return failed;
+}
+
+// What the screen shows of a reply (orion_cloud_screen_text).
+int screen_selftest(void)
+{
+    static const struct { const char *in; const char *want; } cases[] = {
+        {"[laugh] Sure, I can do that.", "Sure, I can do that."},
+        {"|speaking| Hello there! |pause| How are you?", "Hello there! How are you?"},
+        {"Done.<turn|>", "Done."},
+        {"It is *really* nice [excited] .", "It is really nice."},
+        {"Plain words stay.", "Plain words stay."},
+        {"A [never closed bracket stays", "A [never closed bracket stays"},
+    };
+    int failed = 0;
+    char out[128];
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        orion_cloud_screen_text(cases[i].in, out, sizeof(out));
+        if (strcmp(out, cases[i].want) != 0) {
+            ESP_LOGE(TAG, "screen case %u: got '%s'", (unsigned) i, out);
+            failed++;
+        }
+    }
+    orion_cloud_screen_text("الساعة [sigh] الثالثة.", out, sizeof(out));
+    if (strcmp(out, "الساعة الثالثة.") != 0) {
+        ESP_LOGE(TAG, "screen arabic: got '%s'", out);
+        failed++;
+    }
+    ESP_LOGI(TAG, "screen %d failed", failed);
     return failed;
 }

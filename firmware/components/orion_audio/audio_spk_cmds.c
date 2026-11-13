@@ -1,4 +1,5 @@
-// Console command: spk [stats|boost on|off|gain <db>|presence <db>|slots left|both]
+// Console command: spk [stats|boost on|off|gain <db>|presence <db>|slots left|both|
+// supply on|off|prio <n>]
 // "stats" reports the last stream through the pipeline in dBFS, so two
 // settings can be compared on the same clip.
 #include "orion_audio.h"
@@ -58,6 +59,21 @@ static int cmd_spk(int argc, char **argv)
         }
         static const char *const names[] = { "raw", "clean", "boost" };
         printf("spk mode %s\n", names[audio_dsp_mode()]);
+        return 0;
+    }
+    if (!strcmp(sub, "supply")) {
+        if (argc > 2) {
+            audio_spk_set_supply_watch(!strcmp(argv[2], "on") || !strcmp(argv[2], "1"));
+        }
+        printf("spk supply watch %s, voice %.1f dB\n", audio_spk_supply_watch() ? "on" : "off",
+               audio_spk_supply_db());
+        return 0;
+    }
+    if (!strcmp(sub, "prio")) {
+        if (argc > 2) {
+            audio_spk_set_writer_prio((unsigned) atoi(argv[2]));
+        }
+        printf("spk writer priority %u while playing\n", audio_spk_writer_prio());
         return 0;
     }
     if (!strcmp(sub, "silent")) {
@@ -131,7 +147,7 @@ static int cmd_spk(int argc, char **argv)
         return 0;
     }
     printf("usage: spk [stats|mode raw|clean|boost|silent on|off|capture on|off|dump|boost on|off|"
-           "gain <db>|presence <db>|treble <db>|hpf <hz>|mud <db>|slots left|both]\n");
+           "gain <db>|presence <db>|treble <db>|hpf <hz>|mud <db>|slots left|both|supply on|off|prio <n>]\n");
     return 1;
 }
 
@@ -139,7 +155,7 @@ esp_err_t audio_spk_register_cmd(void)
 {
     const esp_console_cmd_t cmd = {
         .command = "spk",
-        .help = "spk [stats|boost on|off|gain <db>|presence <db>|slots left|both]: loudness pipeline",
+        .help = "spk [stats|boost on|off|gain <db>|presence <db>|slots left|both|supply on|off|prio <n>]: loudness pipeline",
         .func = cmd_spk,
     };
     ESP_RETURN_ON_ERROR(esp_console_cmd_register(&cmd), TAG, "register spk");

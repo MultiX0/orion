@@ -18,6 +18,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#include "esp_timer.h"
 
 static const char *TAG = "spk";
 
@@ -26,6 +27,12 @@ static const char *TAG = "spk";
 #define FADE_SAMPLES   160     // 5 ms ramp at 32 kHz, 10 ms at 16 kHz
 #define CHUNK          256
 #define TONE_AMPLITUDE 12000
+// The task feeding the speaker runs at this priority while a stream plays.
+// At 4 it shared the CPU with LVGL drawing the orb (core 1) and the TTS
+// worker decrypting the stream: both busy at once held the writer past the
+// DMA's 120 ms and the speaker played holes, mid word. Above both, below
+// Wi-Fi and the mic.
+#define WRITER_PRIO    7
 
 static i2s_chan_handle_t s_tx;
 static SemaphoreHandle_t s_lock;
@@ -38,7 +45,99 @@ static int16_t s_up_prev;
 static uint8_t s_volume = 100;
 static bool s_both_slots = true;
 static volatile bool s_playing;
-static uint32_t s_written;
+static volatile uint32_t s_written;
+// The DMA ran out while a stream was playing (not paused between pieces): it
+// sent its auto-cleared silence, a hole in the middle of a word. Counted by
+// the driver's queue overflow event, which fires when every descriptor has
+// been sent with nothing new written into it.
+static volatile uint32_t s_underruns;
+// What the supply can give, learned while speaking. Every 10 ms of playback
+// the charger is asked whether it is holding its input back; each time it
+// is, the voice goes down 1.5 dB, to at most 15 dB. After 4 s without one it
+// creeps back at 0.5 dB a second. The level carries to the next answer, so
+// on a weak USB port (a mini PC's) the voice settles at the loudest that
+// port can feed without the amplifier dropping out, and on a strong one it
+// stays at full. Measured, not guessed: without this, a weak port gave holes
+// in the middle of words.
+#define SUPPLY_POLL_US   10000
+#define SUPPLY_DROP_DB   1.5f
+#define SUPPLY_MIN_DB    -15.0f
+#define SUPPLY_CALM_US   4000000
+#define SUPPLY_RISE_DBS  0.5f
+static float s_supply_db;
+static int64_t s_supply_poll_us;
+static int64_t s_supply_calm_since;
+static uint32_t s_supply_trips;
+static float s_supply_min_db;
+static bool s_supply_watch = true;   // spk supply on|off, for comparing
+
+// Counts the supply holding back either way; adjusts the voice only when the
+// watch is on, so `spk supply off` measures the same thing without acting.
+static void supply_check(void)
+{
+    const int64_t now = esp_timer_get_time();
+    if (now - s_supply_poll_us < SUPPLY_POLL_US) {
+        return;
+    }
+    const int64_t dt = s_supply_poll_us ? now - s_supply_poll_us : 0;
+    s_supply_poll_us = now;
+    if (board_power_held_back()) {
+        s_supply_trips++;
+        if (!s_supply_watch) {
+            return;
+        }
+        s_supply_db -= SUPPLY_DROP_DB;
+        if (s_supply_db < SUPPLY_MIN_DB) {
+            s_supply_db = SUPPLY_MIN_DB;
+        }
+        s_supply_calm_since = now;
+    } else if (s_supply_watch && s_supply_db < 0 && now - s_supply_calm_since > SUPPLY_CALM_US) {
+        s_supply_db += SUPPLY_RISE_DBS * (float) dt / 1e6f;
+        if (s_supply_db > 0) {
+            s_supply_db = 0;
+        }
+    }
+    if (s_supply_db < s_supply_min_db) {
+        s_supply_min_db = s_supply_db;
+    }
+    audio_dsp_set_supply_db(s_supply_db);
+}
+
+void audio_spk_set_supply_watch(bool on)
+{
+    s_supply_watch = on;
+    if (!on) {
+        s_supply_db = 0;
+        audio_dsp_set_supply_db(0);
+    }
+}
+
+bool audio_spk_supply_watch(void)
+{
+    return s_supply_watch;
+}
+
+float audio_spk_supply_db(void)
+{
+    return s_supply_db;
+}
+
+static UBaseType_t s_writer_prio;
+static UBaseType_t s_writer_target = WRITER_PRIO;   // spk prio <n>; 0 leaves the writer as it is
+static TaskHandle_t s_writer;
+static int64_t s_last_write_us;
+static uint32_t s_max_wait_us;
+
+static bool IRAM_ATTR on_send_q_ovf(i2s_chan_handle_t h, i2s_event_data_t *e, void *ctx)
+{
+    (void) h;
+    (void) e;
+    (void) ctx;
+    if (s_playing && s_written) {
+        s_underruns++;
+    }
+    return false;
+}
 static int16_t s_last;
 
 // Square law: 50 percent is about -12 dB, which is what a volume knob feels
@@ -122,6 +221,16 @@ static esp_err_t write_raw(const int16_t *pcm, size_t samples)
         samples -= take;
     }
     return ESP_OK;
+}
+
+void audio_spk_set_writer_prio(unsigned prio)
+{
+    s_writer_target = prio > 20 ? 20 : prio;
+}
+
+unsigned audio_spk_writer_prio(void)
+{
+    return (unsigned) s_writer_target;
 }
 
 void audio_spk_set_silent(bool on)
@@ -240,6 +349,19 @@ esp_err_t orion_audio_play_begin(uint32_t sample_rate)
     }
     s_written = 0;
     s_last = 0;
+    s_underruns = 0;
+    s_last_write_us = 0;
+    s_max_wait_us = 0;
+    s_supply_trips = 0;
+    s_supply_min_db = s_supply_db;
+    s_supply_poll_us = 0;
+    s_supply_calm_since = esp_timer_get_time();
+    audio_dsp_set_supply_db(s_supply_db);
+    s_writer = xTaskGetCurrentTaskHandle();
+    s_writer_prio = uxTaskPriorityGet(NULL);
+    if (s_writer_prio < s_writer_target) {
+        vTaskPrioritySet(NULL, s_writer_target);
+    }
     s_playing = true;
     return ESP_OK;
 }
@@ -250,6 +372,9 @@ static esp_err_t push(const int16_t *in, size_t n)
     int16_t buf[CHUNK];
     while (n > 0) {
         size_t take = n < CHUNK ? n : CHUNK;
+        // Here, not per write: one write can be a whole sentence (say, an
+        // earcon), and the supply has to be watched while it plays.
+        supply_check();
         audio_dsp_process(in, buf, take);
         for (size_t i = 0; i < take && s_written < FADE_SAMPLES; i++, s_written++) {
             buf[i] = (int16_t) ((int32_t) buf[i] * (int32_t) s_written / FADE_SAMPLES);
@@ -310,8 +435,14 @@ esp_err_t orion_audio_play_write(const void *pcm, size_t bytes)
         return ESP_ERR_INVALID_STATE;
     }
     if (bytes == 0) {
+        s_last_write_us = 0;      // a pause between pieces is not a stall
         return pause_fade();
     }
+    const int64_t now = esp_timer_get_time();
+    if (s_last_write_us && now - s_last_write_us > s_max_wait_us) {
+        s_max_wait_us = (uint32_t) (now - s_last_write_us);
+    }
+    s_last_write_us = now;
     track_out_level((const int16_t *) pcm, bytes / sizeof(int16_t));
     return push(pcm, bytes / sizeof(int16_t));
 }
@@ -330,6 +461,7 @@ esp_err_t orion_audio_play_end(void)
         ramp[i] = (int16_t) ((int32_t) s_last * (FADE_SAMPLES - 1 - i) / FADE_SAMPLES);
     }
     write_raw(ramp, FADE_SAMPLES);
+    s_written = 0;      // the DMA running dry from here on is the end, not a hole
 
     // i2s_channel_write returns once the data is queued, not once it has left
     // the pin. Wait out the DMA depth so the caller knows the sound is over.
@@ -339,13 +471,19 @@ esp_err_t orion_audio_play_end(void)
     audio_dsp_stats_t st;
     audio_dsp_get_stats(&st);
     if (st.samples > s_rate) {
-        ESP_LOGI(TAG, "played %.1f s, out %.1f dBFS rms, guard min %.1f dB, %u samples tripped",
+        ESP_LOGI(TAG, "played %.1f s, out %.1f dBFS rms, guard min %.1f dB, %u samples tripped, "
+                 "%u dma underruns, longest wait between writes %u ms, supply held back %u times, "
+                 "voice %.1f dB (lowest %.1f)",
                  (float) st.samples / s_rate,
                  10.0f * log10f(st.out_sq / st.samples + 1e-12f), st.min_guard_db,
-                 (unsigned) st.guard_trips);
+                 (unsigned) st.guard_trips, (unsigned) s_underruns, (unsigned) (s_max_wait_us / 1000),
+                 (unsigned) s_supply_trips, s_supply_db, s_supply_min_db);
     }
 
     s_playing = false;
+    if (s_writer == xTaskGetCurrentTaskHandle() && uxTaskPriorityGet(NULL) != s_writer_prio) {
+        vTaskPrioritySet(NULL, s_writer_prio);
+    }
     audio_mic_set_muted(false);
     xSemaphoreGive(s_lock);
     return ESP_OK;
@@ -409,6 +547,8 @@ esp_err_t audio_spk_init(void)
     };
     std.slot_cfg.slot_mask = I2S_STD_SLOT_BOTH;
     ESP_RETURN_ON_ERROR(i2s_channel_init_std_mode(s_tx, &std), TAG, "std mode");
+    const i2s_event_callbacks_t cbs = { .on_send_q_ovf = on_send_q_ovf };
+    ESP_RETURN_ON_ERROR(i2s_channel_register_event_callback(s_tx, &cbs, NULL), TAG, "callbacks");
     ESP_RETURN_ON_ERROR(i2s_channel_enable(s_tx), TAG, "enable");
 
     // Clock is running and the DMA is sending zeros. Now wake the amp.

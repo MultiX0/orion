@@ -1,0 +1,10 @@
+# Orion Hub: route dsh's model requests to Anthropic. The key comes from the
+# ANTHROPIC_API_KEY environment variable of the dsh process, never from this file.
+- id: llm-pi-ai
+  config:
+    providers:
+      anthropic:
+        apiKeyEnv: ANTHROPIC_API_KEY
+        retryPolicy:
+          mode: normal
+          maxRetries: 2

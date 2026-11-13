@@ -119,6 +119,60 @@ void cloud_strip_tags(char *text)
     *w = '\0';
 }
 
+// What the screen shows of a reply: the words only. Fish cues in square
+// brackets are performed, not read, and must not be read on the screen
+// either; nor a model's control token <...>, a marker it made up between
+// pipes |speaking|, or an asterisk. Spaces left behind are folded.
+void orion_cloud_screen_text(const char *in, char *out, size_t out_len)
+{
+    if (!out_len) return;
+    size_t w = 0;
+    for (const char *r = in ? in : ""; *r && w + 1 < out_len;) {
+        const char open = *r;
+        const char close = open == '[' ? ']' : open == '<' ? '>' : open == '|' ? '|' : 0;
+        if (close) {
+            const char *end = strchr(r + 1, close);
+            if (end && end - r <= 64) {
+                r = end + 1;
+                continue;
+            }
+        }
+        if (*r == '*') {
+            r++;
+            continue;
+        }
+        // One space at most, none at the start or before punctuation.
+        if (*r == ' ' || *r == '\n' || *r == '\t') {
+            const char next = r[1];
+            if (w == 0 || out[w - 1] == ' ' || next == ' ' || next == '\0' || next == '.' ||
+                next == ',' || next == '!' || next == '?' || next == ':' || next == ';') {
+                r++;
+                continue;
+            }
+            out[w++] = ' ';
+            r++;
+            continue;
+        }
+        out[w++] = *r++;
+    }
+    while (w > 0 && out[w - 1] == ' ') w--;
+    out[w] = '\0';
+    // A cue taken out before a full stop leaves "nice ." behind: no space
+    // before punctuation, the Arabic comma and question mark included.
+    size_t k = 0;
+    for (size_t i = 0; out[i]; i++) {
+        if (out[i] == ' ') {
+            const char *n = out + i + 1;
+            if (*n == '.' || *n == ',' || *n == '!' || *n == '?' || *n == ':' || *n == ';' ||
+                strncmp(n, "\xD8\x8C", 2) == 0 || strncmp(n, "\xD8\x9F", 2) == 0) {
+                continue;
+            }
+        }
+        out[k++] = out[i];
+    }
+    out[k] = '\0';
+}
+
 esp_err_t cloud_read_all(cloud_resp_t *resp, char **out, size_t *len, size_t cap)
 {
     *out = NULL;
@@ -161,7 +215,8 @@ uint32_t cloud_prewarm_slot(cloud_slot_t slot)
     }
     cloud_finish(slot, &resp, true);
     const uint32_t ms = cloud_now_ms() - t0;
-    static const char *names[] = { "llm", "stt", "tts", "pc", "phone" };
+    static const char *names[] = { "llm", "stt", "tts", "pc", "phone", "hub" };
+    _Static_assert(sizeof(names) / sizeof(names[0]) == CLOUD_SLOT_COUNT, "a name per slot");
     ESP_LOGI(TAG, "prewarm %s %s: %u ms, %s", names[slot], st->origin, (unsigned) ms,
              resp.reused ? "was already warm" : "new session");
     return ms;

@@ -14,6 +14,7 @@ import '../domain/provider_kind.dart';
 import '../domain/provider_repository.dart';
 import 'model_list_parser.dart';
 import 'provider_headers.dart';
+import 'request_fields.dart';
 
 /// Talks to OpenAI-compatible endpoints: list the models, prove the key,
 /// then hand the config to the board.
@@ -48,8 +49,9 @@ class HttpProviderRepository implements ProviderRepository {
   @override
   Future<Result<String>> testCompletion(
     LlmProvider provider,
-    String model,
-  ) async {
+    String model, {
+    bool again = false,
+  }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '${provider.baseUrl}/chat/completions',
@@ -62,7 +64,7 @@ class HttpProviderRepository implements ProviderRepository {
               'content': 'Say hi in five words.',
             },
           ],
-          'max_tokens': 20,
+          ...RequestFields.of(provider, model, maxTokens: 20),
         },
       );
       final reply = _firstChoice(res.data);
@@ -76,6 +78,17 @@ class HttpProviderRepository implements ProviderRepository {
       }
       return Ok(reply);
     } on DioException catch (e) {
+      // A field this provider refuses: learned, and asked once more.
+      final body = e.response?.data;
+      if (!again &&
+          e.response?.statusCode == 400 &&
+          RequestFields.learn(
+            provider,
+            model,
+            body is String ? body : jsonEncode(body),
+          )) {
+        return testCompletion(provider, model, again: true);
+      }
       return Err(_providerFailure(e, model));
     }
   }
@@ -110,7 +123,7 @@ class HttpProviderRepository implements ProviderRepository {
               ],
             },
           ],
-          'max_tokens': 300,
+          ...RequestFields.of(provider, model, maxTokens: 300),
         },
       );
       final reply = _firstChoice(res.data);

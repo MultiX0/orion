@@ -31,6 +31,10 @@ abstract class AppSettings with _$AppSettings {
     /// Speech to text and text to speech. Null until the user or the board
     /// said anything, which reads as the board's defaults.
     VoiceStages? voiceStages,
+
+    /// This install's Orion Link id, "pc-..." or "phone-..." and 12 hex
+    /// digits (docs/ORION_LINK.md). Made on first launch, never changed.
+    String? linkId,
   }) = _AppSettings;
 
   factory AppSettings.fromJson(Map<String, dynamic> json) =>

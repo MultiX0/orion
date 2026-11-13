@@ -29,10 +29,12 @@ Only the newest release of each part gets security fixes.
 
 | Part | Version | Supported |
 |---|---|---|
-| Firmware | 1.0.x | Yes |
-| Firmware | before 1.0.0 (development builds) | No |
+| Firmware | 1.1.x | Yes |
+| Firmware | 1.0.x and development builds | No |
 | App | the latest release | Yes |
 | App | older releases and development builds | No |
+| Orion Hub | the latest image (`multix00/orion-hub:latest`) | Yes |
+| Orion Hub | older images and development builds | No |
 
 A fix for the firmware ships as a new release on the Releases page. Update a board that is already set up with the steps in `docs/FIRMWARE.md`, which keep its settings.
 
@@ -40,10 +42,12 @@ A fix for the firmware ships as a new release on the Releases page. Update a boa
 
 - **The board's LAN API**: the HTTP API on port 80, the `/ws` WebSocket, and the camera endpoints `/capture` and `/stream`. Every endpoint except `GET /api/info` must require the paired app's token (`X-Orion-Token`, or `?token=` on the WebSocket). A way around that, or a way to learn a token, is in scope.
 - **Pairing**: pairing over the LAN with the six digit code on the board's screen (`POST /api/pair`), and pairing over Bluetooth in setup mode (ESP-IDF Unified Provisioning, security version 1, with a code on the screen as the proof of possession). Guessing, replaying or skipping the code, or pairing without seeing the screen, is in scope.
-- **The PC harness on port 7331**: the tool server the desktop app runs when PC control is on. It listens on the LAN and must accept only the paired token. This includes `POST /tool`, the PC brain at `POST /v1/chat/completions`, the approval modes ("Ask me first" must really ask), the sandbox folder `~/Orion/agent`, and the Windows firewall rule the app adds for port 7331.
+- **The PC harness on port 7331**: the tool server the desktop app runs when PC control is on. It listens on the LAN and must accept only the paired token. This includes `POST /tool`, the PC brain at `POST /v1/chat/completions`, the approval modes ("Ask me first" must really ask), the PC agent (DeepSeek Harness, which has full control of the computer and must run only as the approval mode allows), and the Windows firewall rule the app adds for port 7331.
+- **The Orion Hub on port 8780**: every route except `GET /.well-known/orion`, `GET /api/v1/info` and the pairing request must require a paired device's token. The first device a new hub sees becomes its owner; after that every device needs approval. The hub runs an agent with control of its server, so a way to pair without approval, to learn a token, or to get a password out of its SSH vault or logs is in scope.
+- **Orion Link**: how the board, the hub and the apps find each other again by id ([docs/ORION_LINK.md](docs/ORION_LINK.md)). A device found again at a new address is trusted because it answers with the right id, so a device on the same network that pretends to be one can receive that pairing's token. This is a known limitation of 1.1, like plain HTTP below; ways to close it are welcome.
 - **Key handling**: provider API keys and the pairing token. In the app they live in the OS keychain (flutter_secure_storage) and must never appear in settings files, logs, URLs or toasts. On the board they live in NVS and `GET /api/config` must only return the last four characters. A key leaking into a log, a crash dump, the serial console, a release file or a network request to anyone but its provider is in scope.
 - **Prompt injection that crosses a boundary**: a web page, search result or model reply that makes Orion run a PC or phone tool the user did not ask for, or skip the approval step.
-- **The release files**: anything in a published firmware image or app build that should not be there.
+- **The release files**: anything in a published firmware image, app build or Orion Hub image that should not be there.
 
 ## Out of scope
 

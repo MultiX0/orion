@@ -1,0 +1,4 @@
+## mDNS queries for _orionhub._tcp. Pinned to the same version as orion_api.
+dependencies:
+  idf: ">=5.5"
+  espressif/mdns: "1.13.1"

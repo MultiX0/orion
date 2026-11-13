@@ -131,8 +131,8 @@ class HttpFishRepository implements FishRepository {
       ),
       402 => ProviderFailure(
         ProviderFailureKind.network,
-        'No Fish API credit for that model. Pick s2.1-pro-free, or add '
-        'credit at fish.audio/app/developers.',
+        'No Fish API credit for that model. Add credit at '
+        'fish.audio/app/developers, or pick s2.1-pro-free.',
         statusCode: status,
       ),
       _ => ProviderFailure(

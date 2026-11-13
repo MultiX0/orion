@@ -29,6 +29,13 @@ typedef void (*board_btn_cb_t)(board_btn_event_t event, void *ctx);
 
 esp_err_t board_button_register(board_btn_cb_t cb, void *ctx);
 
+// The charger is holding its input back right now (board_sy6970.c): the
+// supply cannot give what the board asks for this moment.
+bool board_power_held_back(void);
+
+// Puts the USB input limit back after a replug reset it (board_sy6970.c).
+void board_power_keep(void);
+
 // Reads the SY6970. Returns ESP_ERR_NOT_FOUND if the chip does not answer.
 esp_err_t board_power_info(float *vbus_v, float *vbat_v, bool *charging);
 

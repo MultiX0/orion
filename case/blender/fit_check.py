@@ -7,6 +7,8 @@ For every case part and reference part that come near each other it reports:
 Contacts that are part of the design (listed in PLANNED) are reported but not failures.
 Writes case/blender/fit_report.txt.
 """
+import os
+
 import bpy
 import bmesh
 from mathutils import Vector
@@ -124,7 +126,11 @@ def run():
         lines.append(f"  {g[0]:6.3f} mm  {g[1]} vs {g[2]}")
     lines.append(f"FAILURES: {len(fails)}")
     text = "\n".join(lines)
-    path = r"C:\Users\multix\Desktop\Dev\yt-projects\orion\case\blender\fit_report.txt"
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        here = os.path.join(os.environ.get("ORION_ROOT", os.getcwd()), "case", "blender")
+    path = os.path.join(here, "fit_report.txt")
     open(path, "w").write(text + "\n")
     print(text)
 

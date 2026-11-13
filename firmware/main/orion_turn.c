@@ -16,6 +16,8 @@
 static const char *TAG = "turn";
 
 #define RECORD_MAX_MS   10000
+#define FOLLOWUP_MAX_MS 15000       // up to 7 s to start answering, then the answer
+#define FOLLOWUP_WAIT_MS 7000
 #define TRANSCRIPT_MAX  512
 #define REPLY_MAX       1024
 
@@ -23,6 +25,7 @@ typedef enum {
     TURN_VOICE,
     TURN_TEXT,
     TURN_SAY,       // POST /api/say: speak the text, no model
+    TURN_FOLLOWUP,  // a voice turn right after a question, no wake word
 } turn_kind_t;
 
 static QueueHandle_t s_req;
@@ -36,6 +39,8 @@ static turn_timing_t s_t;
 static char s_pending[TRANSCRIPT_MAX];
 static char s_transcript[TRANSCRIPT_MAX];
 static char s_reply[REPLY_MAX];
+static bool s_wants_reply;
+static bool s_followup;
 
 static uint32_t ms_since(int64_t t0)
 {
@@ -88,7 +93,11 @@ static bool record_and_transcribe(void)
     size_t samples = 0;
     s_asr_streaming = false;
     int64_t t = esp_timer_get_time();
-    esp_err_t err = orion_audio_record_utterance_stream(&pcm, &samples, RECORD_MAX_MS, asr_sink, NULL);
+    if (s_followup) {
+        orion_audio_set_no_speech_ms(FOLLOWUP_WAIT_MS);
+    }
+    esp_err_t err = orion_audio_record_utterance_stream(&pcm, &samples,
+                                                        s_followup ? FOLLOWUP_MAX_MS : RECORD_MAX_MS, asr_sink, NULL);
     s_t.record_ms = ms_since(t);
 
     if (err != ESP_OK || s_cancel || !pcm || samples == 0) {
@@ -103,7 +112,8 @@ static bool record_and_transcribe(void)
     }
     if (err == ESP_ERR_NOT_FOUND || !pcm || samples == 0) {
         free(pcm);
-        sm_post(EV_ERROR, ERR_NO_SPEECH);
+        // Asked something and no answer came: the user chose not to, that is all.
+        sm_post(s_followup ? EV_QUIET : EV_ERROR, ERR_NO_SPEECH);
         return false;
     }
     if (err != ESP_OK) {
@@ -143,7 +153,7 @@ static bool record_and_transcribe(void)
     if (s_transcript[0] == '\0') {
         // Audio went up and came back empty: silence, or nothing the
         // recognizer could use. Same answer for the user either way.
-        sm_post(EV_ERROR, ERR_NO_SPEECH);
+        sm_post(s_followup ? EV_QUIET : EV_ERROR, ERR_NO_SPEECH);
         return false;
     }
     ESP_LOGI(TAG, "heard: %s", s_transcript);
@@ -196,6 +206,7 @@ static bool respond(void)
     s_t.tts_first_ms = ct.tts_first_ms;
     s_t.tts_total_ms = ct.tts_total_ms;
     s_t.used_camera = ct.used_camera;
+    s_wants_reply = ct.wants_reply;
     ESP_LOGI(TAG, "turn_perf speech_end_to_audio_ms=%u asr_ms=%u asr_connect_ms=%u "
              "llm_first_ms=%u llm_ms=%u tts_first_ms=%u first_audio_ms=%u gap_ms=%u "
              "pieces=%u connect_llm=%u connect_tts=%u total_ms=%u",
@@ -246,6 +257,8 @@ static void run(turn_kind_t kind)
 {
     memset(&s_t, 0, sizeof(s_t));
     s_cancel = false;
+    s_wants_reply = false;
+    s_followup = kind == TURN_FOLLOWUP;
     s_end_to_audio = 0;
     s_t0 = esp_timer_get_time();
 
@@ -253,7 +266,7 @@ static void run(turn_kind_t kind)
         say();
         return;
     }
-    if (kind == TURN_VOICE) {
+    if (kind == TURN_VOICE || kind == TURN_FOLLOWUP) {
         // The TLS handshakes to every host happen while the user is still
         // talking, not after. 1.5 to 2.4 s each on this chip, measured.
         orion_cloud_prewarm();
@@ -296,6 +309,17 @@ void turn_begin(void)
 {
     turn_kind_t k = TURN_VOICE;
     xQueueSend(s_req, &k, 0);
+}
+
+void turn_begin_followup(void)
+{
+    turn_kind_t k = TURN_FOLLOWUP;
+    xQueueSend(s_req, &k, 0);
+}
+
+bool turn_wants_reply(void)
+{
+    return s_wants_reply;
 }
 
 void turn_begin_text(void)

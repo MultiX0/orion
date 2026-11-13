@@ -67,6 +67,7 @@ The round button in the top left corner (or a long press anywhere) opens the men
 
 | Card | Shows | Button |
 |---|---|---|
+| الخادم (Hub) | whether an Orion Hub is found or paired, its name and address, and the code to approve on the hub | ابحث (search), اتصل (connect), or افصل (disconnect): tap, then tap again within 4 s |
 | الكمبيوتر (PC) | whether a PC brain is set up and answering, its address | تحديث (refresh): checks the PC again |
 | الشبكة (Network) | signal, network name, IP address | إعداد الواي فاي (Wi-Fi setup): restarts into Bluetooth setup mode |
 | الكاميرا (Camera) | a live preview from the camera, about 11 frames a second | |

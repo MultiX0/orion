@@ -74,11 +74,16 @@ int32_t orion_audio_mic_rms(void);
 int32_t orion_audio_noise_floor(void);
 
 // Records until about 600 ms of silence follows speech, or max_ms elapses
-// (10 s cap). Speech starts when two 20 ms frames exceed four times the noise
+// (16 s cap). Speech starts when two 20 ms frames exceed four times the noise
 // floor. Keeps 300 ms before the speech and 400 ms after it. Allocates into
 // PSRAM, caller frees with free(). ESP_ERR_NOT_FOUND if nobody spoke within
-// 4 s, in which case *pcm is NULL.
+// 4 s (7 s on a follow-up), in which case *pcm is NULL.
 esp_err_t orion_audio_record_utterance(int16_t **pcm, size_t *samples, uint32_t max_ms);
+
+// The next recording only: how long to wait for the user to start speaking
+// before giving up with ESP_ERR_NOT_FOUND (4 s otherwise). For a follow-up,
+// when Orion has just asked something.
+void orion_audio_set_no_speech_ms(uint32_t ms);
 
 // The same, handing the audio to sink as it is recorded, from the moment
 // speech starts: first everything kept so far (pre-roll or from the mark),

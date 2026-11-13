@@ -12,7 +12,13 @@ import sys
 
 import bpy
 
-ROOT = r"C:\Users\multix\Desktop\Dev\yt-projects\orion\case"
+# The repository: two folders up from this script, or ORION_ROOT, or the folder Blender was
+# started in when the script is exec'd from Blender's console (start Blender in the repository).
+try:
+    REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+except NameError:
+    REPO = os.environ.get("ORION_ROOT", os.getcwd())
+ROOT = os.path.join(REPO, "case")
 B = os.path.join(ROOT, "blender")
 args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 
@@ -45,7 +51,7 @@ for p in json.load(open(os.path.join(MESH, "parts.json"))):
         o.hide_viewport = o.hide_render = True
 
 for step in ("import_parts.py", "branding.py"):
-    exec(open(os.path.join(B, step)).read(), {"__name__": "__main__"})
+    exec(open(os.path.join(B, step)).read(), {"__name__": "__main__", "__file__": os.path.join(B, step)})
 
 # key dimensions as scene custom properties
 P = {}
@@ -56,7 +62,7 @@ for k, v in P.items():
     elif k.isupper() and isinstance(v, tuple) and all(isinstance(x, (int, float)) for x in v):
         sc[f"orion_{k}"] = [float(x) for x in v]
 
-exec(open(os.path.join(B, "render_setup.py")).read(), {"__name__": "__main__"})
+exec(open(os.path.join(B, "render_setup.py")).read(), {"__name__": "__main__", "__file__": os.path.join(B, "render_setup.py")})
 
 # Cycles on the GPU when there is one
 try:
@@ -80,7 +86,7 @@ bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT, "orion_case.blend"), com
 print("saved orion_case.blend")
 
 if "--no-render" not in args:
-    G = {"__name__": "__main__"}
+    G = {"__name__": "__main__", "__file__": os.path.join(B, "render_heroes.py")}
     exec(open(os.path.join(B, "render_heroes.py")).read(), G)
     G["hero"](engine="CYCLES", samples=int(os.environ.get("ORION_SAMPLES", "160")))
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT, "orion_case.blend"), compress=True)

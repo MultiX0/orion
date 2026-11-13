@@ -31,6 +31,7 @@
 #include "orion_prov.h"
 #include "orion_api.h"
 #include "orion_settings.h"
+#include "orion_hub.h"
 
 static const char *TAG = "orion";
 
@@ -212,6 +213,19 @@ static void on_reset(void *ctx)
     }
 }
 
+// The hub client runs on its own task; the state machine owns the screen.
+static void on_hub_change(void *ctx)
+{
+    (void) ctx;
+    sm_post(EV_HUB_INFO, 0);
+}
+
+// The hub brain answered or stopped: the card follows at once, not 40 s later.
+static void on_hub_brain(void)
+{
+    sm_post(EV_HUB_INFO, 0);
+}
+
 void app_main(void)
 {
     report_chip();
@@ -258,9 +272,13 @@ void app_main(void)
     orion_settings_on_change(on_settings_changed);
     orion_cloud_on_progress(on_reply_progress);
     try_init("api", orion_api_start);
+    orion_hub_on_change(on_hub_change, NULL);
+    orion_cloud_on_hub_change(on_hub_brain);
+    try_init("hub", orion_hub_start);
 
     while (true) {
-        vTaskDelay(pdMS_TO_TICKS(60000));
+        orion_hub_serve(60000);   // the hub's NVS work runs here, on this internal stack
+        board_power_keep();
         ESP_LOGI(TAG, "state %s, turns %" PRIu32 ", heap int %u, psram %u",
                  orion_state_name(sm_state()), sm_turn_count(),
                  (unsigned) heap_caps_get_free_size(MALLOC_CAP_INTERNAL),

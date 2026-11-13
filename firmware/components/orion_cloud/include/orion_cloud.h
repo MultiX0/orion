@@ -47,10 +47,11 @@ void orion_cloud_asr_stream_abort(void);
 // while the model is still writing the next; PCM reaches sink, on the calling
 // task, as soon as there is any. Blocks until the last PCM has gone to sink.
 // reply receives the full text, tags included. on_reply may be NULL.
-// If the model calls the look tool, a photo is taken and the answer continues.
+// A question that asks for the camera in so many words takes a photo first.
 // Called now and then while a reply stream is alive, a PC or phone brain
 // working through tools included: the turn's deadline counts from the last
-// sign of life, not from the wake word. From the LLM worker task.
+// sign of life, not from the wake word. From the LLM worker while the stream
+// is read, and from the calling task while the reply plays.
 void orion_cloud_on_progress(void (*cb)(void));
 
 // The next reply looks through the camera first, whatever the text says:
@@ -77,6 +78,17 @@ void orion_cloud_history_reset(void);
 // True while the PC brain answers (PC control on, and its last check passed).
 // host gets "192.168.1.20:7331" when a PC is configured, "" otherwise.
 bool orion_cloud_pc_online(char *host, size_t host_len);
+
+// An Orion Hub this board is paired with, and whether its last check passed.
+// name and host may be empty; host is "address:port". hub/README.md.
+bool orion_cloud_hub_online(char *name, size_t name_len, char *host, size_t host_len);
+
+// A reply as the screen shows it: no voice cue [..], control token <..>,
+// made up marker |..| or asterisk.
+void orion_cloud_screen_text(const char *in, char *out, size_t out_len);
+
+// Called on the cloud worker when the hub brain starts or stops answering.
+void orion_cloud_on_hub_change(void (*cb)(void));
 
 // The phone's brain while it is linked, "192.168.1.23:7331" and the token it
 // paired with; NULL or "" when it left. Any task.
@@ -112,6 +124,7 @@ typedef struct {
     uint32_t gap_ms;            // time the speaker ran out between pieces
     uint8_t pieces;
     bool used_camera;
+    bool wants_reply;           // the brain's answer asked something: listen again, no wake word
 } orion_cloud_timing_t;
 
 void orion_cloud_last_timing(orion_cloud_timing_t *out);

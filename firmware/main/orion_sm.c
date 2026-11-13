@@ -21,6 +21,7 @@
 #include "orion_api.h"
 
 #include "orion_cloud.h"
+#include "orion_hub.h"
 #include "orion_settings.h"
 
 static const char *TAG = "sm";
@@ -32,6 +33,9 @@ static const char *TAG = "sm";
 // costs this chip 1.5 to 3.3 s. A HEAD on each kept alive socket this often
 // means the first question after a quiet spell pays nothing.
 #define HEARTBEAT_MS     40000
+// A brain that keeps asking questions still gets a wake word now and then:
+// at most this many follow-ups in a row without one.
+#define FOLLOWUP_MAX     4
 
 typedef struct {
     orion_event_t ev;
@@ -44,6 +48,9 @@ static esp_timer_handle_t s_deadline;
 static esp_timer_handle_t s_boot;
 static esp_timer_handle_t s_heartbeat;
 static uint32_t s_turns;
+static int s_followups;
+static bool s_hub_hinted;
+static bool s_hub_text;     // the found hint or the approval code is on the idle screen
 
 // ---------------------------------------------------------------------------
 // Inputs. Each runs on somebody else's task and only posts.
@@ -88,6 +95,7 @@ static void enter(orion_state_t st)
     if (st != s_state) {
         ESP_LOGI(TAG, "%s -> %s", orion_state_name(s_state), orion_state_name(st));
         s_state = st;
+        orion_net_set_quiet_tx(st == OS_SPEAKING);
     }
     ui_set_state(st);
     orion_api_publish_state(st);
@@ -112,6 +120,60 @@ static void push_pc_info(void)
     char host[64];
     const bool online = orion_cloud_pc_online(host, sizeof(host));
     ui_set_pc_info(online, online, online ? "PC" : NULL, host[0] ? host : NULL);
+}
+
+// The hub card, and once per boot a hint on the idle screen when a hub turns
+// up that this board is not paired with.
+static void push_hub_info(void)
+{
+    orion_hub_status_t st;
+    orion_hub_status(&st);
+    const char *host = strstr(st.url, "://");
+    host = host ? host + 3 : st.url;
+    const char *name = st.name[0] ? st.name : (st.found ? st.hubs[0].name : NULL);
+    const char *ip = st.url[0] ? host : NULL;
+    char found_ip[48] = "";
+    if (!ip && st.found) {
+        const char *h = strstr(st.hubs[0].url, "://");
+        strlcpy(found_ip, h ? h + 3 : st.hubs[0].url, sizeof(found_ip));
+        ip = found_ip;
+    }
+    ui_set_hub_info((ui_hub_t) st.state, name, ip, st.code);
+    if (st.state == HUB_FOUND && !s_hub_hinted && s_state == OS_IDLE) {
+        s_hub_hinted = true;
+        s_hub_text = true;
+        ui_set_text("لقيت خادم Orion Hub. افتح القائمة واضغط اتصل.");
+    }
+    if (st.state == HUB_WAITING && s_state == OS_IDLE) {
+        char t[96];
+        snprintf(t, sizeof(t), "وافق على هذا الجهاز في الخادم. الرمز %s", st.code);
+        s_hub_text = true;
+        ui_set_text(t);
+    }
+    if (st.state == HUB_CONNECTED) {
+        s_hub_hinted = false;   // the hint, if still up, has served its purpose
+    }
+    // Paired, refused or timed out: the hint or the code has nothing left to say.
+    if (s_hub_text && s_state == OS_IDLE && st.state != HUB_FOUND && st.state != HUB_PAIRING &&
+        st.state != HUB_WAITING) {
+        s_hub_text = false;
+        ui_set_text("");
+    }
+}
+
+static void on_hub_action(void *ctx)
+{
+    (void) ctx;
+    orion_hub_status_t st;
+    orion_hub_status(&st);
+    switch (st.state) {
+    case HUB_FOUND: orion_hub_connect(""); break;
+    case HUB_CONNECTED:
+    case HUB_OFFLINE: orion_hub_forget(); break;
+    case HUB_PAIRING:
+    case HUB_WAITING: break;
+    default: orion_hub_scan(); break;
+    }
 }
 
 static void on_pc_refresh(void *ctx)
@@ -145,9 +207,11 @@ static void go_idle(void)
 {
     esp_timer_stop(s_deadline);
     ui_set_text("");
+    s_hub_text = false;
     enter(orion_net_is_up() ? OS_IDLE : OS_OFFLINE);
     listen_for_wake_word();
     push_pc_info();
+    orion_hub_set_online(orion_cloud_hub_online(NULL, 0, NULL, 0));
 }
 
 static const char *earcon_for(orion_error_t err)
@@ -196,6 +260,7 @@ static void begin_turn(bool from_text)
         return;
     }
     s_turns++;
+    s_followups = 0;
     if (!from_text) {
         // The recording starts here, at the wake word, not after the chime, so
         // "Orion, what time is it" in one breath keeps its first word.
@@ -216,6 +281,25 @@ static void begin_turn(bool from_text)
     // Over the recording, with the mic open. The recorder knows the speaker is
     // playing and never takes the chime for speech.
     orion_audio_play_asset_mic_open("earcons/wake.wav");
+}
+
+// The answer asked the user something (an Orion Hub set orion_listen): listen
+// for the reply right away, no wake word. The chime says "your turn"; nobody
+// answering within 7 s ends it quietly (EV_QUIET).
+static void begin_followup(void)
+{
+    s_turns++;
+    s_followups++;
+    orion_audio_mark_utterance();
+    orion_cloud_prewarm();
+    orion_wakeword_stop();
+    enter(OS_WAKE);
+    esp_timer_stop(s_deadline);
+    esp_timer_start_once(s_deadline, (uint64_t) TURN_DEADLINE_MS * 1000);
+    enter(OS_LISTENING);
+    turn_begin_followup();
+    orion_audio_play_asset_mic_open("earcons/wake.wav");
+    ESP_LOGI(TAG, "follow-up %d: listening for the reply without the wake word", s_followups);
 }
 
 static void log_turn(void)
@@ -276,7 +360,12 @@ static void handle(const sm_msg_t *m)
         break;
 
     case EV_LLM_DONE:
-        ui_set_text(turn_last_reply());
+        {
+            // The words only: voice cues and any markup stay off the screen.
+            static char shown[512];   // ui_set_text keeps 511 bytes
+            orion_cloud_screen_text(turn_last_reply(), shown, sizeof(shown));
+            ui_set_text(shown);
+        }
         orion_api_publish_text("assistant", turn_last_reply());
         break;
 
@@ -288,7 +377,27 @@ static void handle(const sm_msg_t *m)
 
     case EV_TTS_DONE:
         log_turn();
-        go_idle();
+        if (turn_wants_reply() && s_followups < FOLLOWUP_MAX && orion_net_is_up()) {
+            begin_followup();
+        } else {
+            go_idle();
+        }
+        break;
+
+    case EV_QUIET:
+        // Posted by a follow-up only: nobody answered (LISTENING), or the
+        // recording came back empty after EV_SPEECH_END (THINKING).
+        if (s_state == OS_LISTENING || s_state == OS_THINKING) {
+            ESP_LOGI(TAG, "no reply to the question, back to idle");
+            turn_cancel();
+            go_idle();
+        }
+        break;
+
+    case EV_HUB_INFO:
+        // A change of state posts this again, with nothing left to change.
+        orion_hub_set_online(orion_cloud_hub_online(NULL, 0, NULL, 0));
+        push_hub_info();
         break;
 
     case EV_ERROR:
@@ -315,6 +424,7 @@ static void handle(const sm_msg_t *m)
 
     case EV_PC_INFO:
         push_pc_info();
+        orion_hub_set_online(orion_cloud_hub_online(NULL, 0, NULL, 0));
         break;
 
     case EV_NET_UP:
@@ -373,6 +483,7 @@ esp_err_t sm_start(void)
     board_button_register(on_button, NULL);
     ui_on_tap(on_tap, NULL);
     ui_on_pc_refresh(on_pc_refresh, NULL);
+    ui_on_hub_action(on_hub_action, NULL);
     ui_set_pc_info(false, false, NULL, NULL);
     ui_set_camera_source(orion_camera_capture_jpeg, orion_camera_release);
     ui_set_camera_preview(orion_camera_capture_preview, orion_camera_release);

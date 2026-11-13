@@ -1,0 +1,34 @@
+# Written by Orion. Edit the provider in the app, not here.
+- id: llm-pi-ai
+  config:
+    providers:
+      orion:
+        apiKeyEnv: DP_ORION_KEY
+        api: openai-completions
+        baseURL: 'https://api.deepinfra.com/v1/openai'
+        models:
+          - id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo'
+            input: [text, image]
+- id: agent-default-model
+  config:
+    provider: orion
+    model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo'
+- insert:
+    - id: mcp-playwright
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: playwright
+        transport: stdio
+        command: npx
+        args: ['-y', '@playwright/mcp@0.0.84', '--browser', 'msedge', '--output-dir', 'C:/Users/ada/Downloads']
+        startupTimeoutMs: 180000
+        toolCallTimeoutMs: 120000
+    - id: mcp-winapp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: winapp
+        transport: stdio
+        command: npx
+        args: ['-y', 'winapp-mcp@2.0.0']
+        startupTimeoutMs: 180000
+        toolCallTimeoutMs: 120000

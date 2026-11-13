@@ -24,6 +24,7 @@ class PhoneBrainHost {
     required String? Function() token,
     PcMemory? memory,
     Future<bool> Function(Uri uri)? launch,
+    Map<String, dynamic>? Function(int port)? identity,
     int port = ToolServer.defaultPort,
   }) : _launch = launch ?? _launchOutside {
     final pcBrain = PcBrain(
@@ -42,6 +43,7 @@ class PhoneBrainHost {
       agentLogs: const Stream.empty(),
       token: token,
       chat: pcBrain.open,
+      identity: identity,
       port: port,
     );
   }

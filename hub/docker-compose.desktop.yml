@@ -1,0 +1,27 @@
+# For trying the hub on Docker Desktop (Windows or macOS), where the container cannot use the host's
+# network: the port is published instead, mDNS is off (boards find it by sweeping their network for
+# port 8780, or by address), and the LAN to scan is given explicitly. On Linux use docker-compose.yml.
+#   docker compose -f docker-compose.desktop.yml up -d
+name: orion-hub
+services:
+  orion-hub:
+    build: .                            # `up -d` pulls the image; `up -d --build` builds it here
+    image: multix00/orion-hub:latest
+    container_name: orion-hub
+    restart: unless-stopped
+    ports:
+      - "8780:8780"
+    env_file: .env
+    environment:
+      ORION_HUB_PORT: "8780"
+      # A container's hostname is its id: name the hub plainly instead.
+      ORION_HUB_NAME: ${ORION_HUB_NAME:-Orion Hub}
+      ORION_HUB_MDNS: "0"
+      ORION_HUB_LAN_CIDR: ${ORION_HUB_LAN_CIDR:-192.168.1.0/24}
+      ORION_HUB_CONTAINER: "0"
+      TZ: ${TZ:-UTC}              # set TZ in .env to your time zone
+    volumes:
+      - orion-hub-state:/var/lib/orion-hub
+      - /var/run/docker.sock:/var/run/docker.sock
+volumes:
+  orion-hub-state:

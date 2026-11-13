@@ -4,11 +4,9 @@
 // go is handed to the TTS worker at once, so Orion starts speaking on the first
 // clause instead of after the last word.
 //
-// Vision still works mid stream. Asked "شو هاد؟" the model answers with a
-// tool_call for look in the deltas instead of text; this reads the stream to
-// its end, takes a JPEG, and streams a second answer with the picture attached.
-// The second request carries no tools and no tool_call echo: system, history,
-// then the question with the image, which is enough.
+// Vision: a question that asks for the camera in so many words (LOOK_WORDS)
+// takes a JPEG first, and the request carries it as an image part. No tools
+// are offered.
 
 #include "cloud_private.h"
 
@@ -26,6 +24,10 @@
 static const char *TAG = "cloud_reply";
 
 #define MAX_TOKENS 200
+// A model that thinks before it answers spends its thinking out of the limit:
+// Claude when it cannot stop, and OpenAI's reasoning models, which count it in
+// max_completion_tokens.
+#define MAX_TOKENS_THINKING 2000
 #define READ_BUF   2048
 // esp_http_client_read() does not return until it has the whole length asked
 // for or the response ends. Asked for READ_BUF, a short answer's first token
@@ -34,24 +36,37 @@ static const char *TAG = "cloud_reply";
 // token.
 #define SSE_READ   128
 
+// Not offered: see tool_mode in cloud_reply_run.
 static const char *LOOK_TOOL =
     "[{\"type\":\"function\",\"function\":{\"name\":\"look\",\"description\":"
     "\"Take a picture with the camera and look at what is in front of the device. "
     "Call this whenever the user asks about something you can see.\","
     "\"parameters\":{\"type\":\"object\",\"properties\":{}}}}]";
 
-// A question that is plainly about what is in front of the board takes the
-// picture first, in "tool" and "keyword" mode alike: no round trip for the
-// model to decide to call look, which costs most of a second. Anything else
-// still has the look tool in "tool" mode. Latin letters match without case.
+// The camera is used only when the user asks for it in so many words: take
+// a photo, look at this, what do you see. The model is never offered a look
+// tool to call on its own judgement, and a question merely about "this" is
+// not enough. Latin letters match without case.
 static const char *LOOK_WORDS[] = {
-    "what do you see", "what can you see", "what are you seeing", "look at",
-    "what is this", "what's this", "what is that", "what's that", "who is this",
-    "what am i holding", "in front of you", "read this", "describe this",
-    "شو هاد", "شو هذا", "شو هاي", "شو هيدا", "ما هذا", "ما هذه", "ماذا ترى",
-    "ماذا ترين", "شو بتشوف", "شو شايف", "شو شايفة", "شوف", "شوفي", "انظر",
-    "انظري", "قدامك", "أمامك", "إيش هذا", "وش هذا", "اقرأ هذا", "اقرئي",
+    "take a photo", "take a picture", "take a pic", "snap a photo", "snap a picture",
+    "take photo", "take picture", "use the camera", "use your camera", "with the camera",
+    "with your camera", "look at this", "look at that",
+    "what do you see", "what can you see", "what are you seeing", "what am i holding",
+    "in front of you", "read this for me",
+    // Whole phrases: a bare صور is also inside قصور، تصور، منصور.
+    "صوّر", "صوّري", "صورني", "صوّرني", "صور هذا", "صوري هذا", "صور لي", "صوري لي",
+    "خذ صورة", "خذي صورة", "التقط صورة", "التقطي صورة", "افتح الكاميرا", "استخدم الكاميرا",
+    "بالكاميرا", "شوف هذا", "شوف هاد", "شوفي هذا", "انظر إلى هذا", "انظري إلى هذا", "انظر الى هذا",
+    "ماذا ترى", "ماذا ترين", "شو بتشوف", "شو بتشوفي", "شو شايف", "شو شايفة", "قدامك", "أمامك",
 };
+
+// A phrase counts only where a word starts, since صور هذا is also the end
+// of تصور هذا (imagine this). A byte from 0x80 up counts as part of a word.
+static bool word_start(const char *low, const char *at)
+{
+    const unsigned char b = at > low ? (unsigned char) at[-1] : ' ';
+    return b < 0x80 && !isalnum(b);
+}
 
 static bool wants_camera(const char *text)
 {
@@ -62,7 +77,9 @@ static bool wants_camera(const char *text)
     }
     low[n] = '\0';
     for (size_t i = 0; i < sizeof(LOOK_WORDS) / sizeof(LOOK_WORDS[0]); i++) {
-        if (strstr(low, LOOK_WORDS[i])) return true;
+        for (const char *m = strstr(low, LOOK_WORDS[i]); m; m = strstr(m + 1, LOOK_WORDS[i])) {
+            if (word_start(low, m)) return true;
+        }
     }
     return false;
 }
@@ -71,16 +88,16 @@ static bool wants_camera(const char *text)
 // it opened, closed or played something it cannot reach. Without it, asked to
 // close Spotify with no PC connected, the model says it did.
 static const char *NOTE_ALONE =
-    "\n\nNo PC or phone is connected to you right now. You cannot open, close, play or change "
+    "\n\nNo Orion Hub, PC or phone is connected to you right now. You cannot open, close, play or change "
     "anything on a computer or phone, and you cannot search the web. If asked to, say in one short "
     "sentence that the Orion app has to be open on the PC first, or on the phone for something on "
     "the phone, for example: افتح تطبيق Orion على الكمبيوتر أولاً، وبعدها أفعلها لك. "
     "Never say you did it.";
 static const char *NOTE_NO_ANSWER =
-    "\n\nThe PC or phone connected to you did not answer just now, so you cannot act on it this "
-    "time and you cannot search the web. If asked to open, close or play something, say in one "
-    "short sentence that it did not answer and to try again, for example: "
-    "لم يستجب الكمبيوتر الآن، جرّب مرة ثانية. Never say you did it.";
+    "\n\nThe Orion Hub, PC or phone connected to you did not answer just now, so you cannot act on "
+    "it this time and you cannot search the web. If asked to open, close or play something, say in "
+    "one short sentence that it did not answer and to try again, for example: "
+    "لم يصلني رد الآن، جرّب مرة ثانية. Never say you did it.";
 
 void cloud_reply_append(cloud_reply_state_t *st, const char *delta)
 {
@@ -119,6 +136,15 @@ static void now_line(char *out, size_t len)
              tm.tm_hour, tm.tm_min);
 }
 
+static const char *think_field(const cloud_cfg_t *cfg)
+{
+    switch (cfg->llm_think) {
+    case LLM_THINK_DISABLED: return ",\"thinking\":{\"type\":\"disabled\"}";
+    case LLM_THINK_BETWEEN_TOOLS: return ",\"thinking\":{\"type\":\"between_tools\"}";
+    default: return "";
+    }
+}
+
 static bool build(jw_t *w, const char *text, bool tools, const uint8_t *jpeg, size_t jpeg_len,
                   const char *note)
 {
@@ -144,8 +170,11 @@ static bool build(jw_t *w, const char *text, bool tools, const uint8_t *jpeg, si
 
     jw_raw(w, "{");
     jw_kv_str(w, "model", cfg->llm.model);
-    char nums[96];
-    snprintf(nums, sizeof(nums), ",\"stream\":true,\"max_tokens\":%d,\"temperature\":0.6", MAX_TOKENS);
+    char nums[160];
+    snprintf(nums, sizeof(nums), ",\"stream\":true,\"%s\":%d%s%s",
+             cfg->llm_mct ? "max_completion_tokens" : "max_tokens",
+             (cfg->llm_think == LLM_THINK_ROOM || cfg->llm_mct) ? MAX_TOKENS_THINKING : MAX_TOKENS,
+             cfg->llm_no_temp ? "" : ",\"temperature\":0.6", think_field(cfg));
     jw_raw(w, nums);
     jw_raw(w, ",\"messages\":[{");
     jw_kv_str(w, "role", "system");
@@ -194,7 +223,6 @@ static esp_err_t write_body(esp_http_client_handle_t c, void *ctx)
     return ESP_OK;
 }
 
-static void progress(void);
 
 // One streamed request, to the board's model or the PC brain.
 // ESP_ERR_NOT_FINISHED means the model asked to look.
@@ -219,9 +247,30 @@ static esp_err_t stream_once(const jw_t *w, cloud_reply_state_t *st, cloud_slot_
         size_t n = 0;
         cloud_read_all(&resp, &msg, &n, 512);
         ESP_LOGE(TAG, "chat http %d: %.160s", resp.status, msg ? msg : "");
+        // A provider the board has no rule for, refusing a field: learn it,
+        // and the caller sends the same turn again without it.
+        bool learned = false;
+        if (slot == CLOUD_SLOT_LLM && resp.status == 400 && msg) {
+            const cloud_cfg_t *cfg = cloud_cfg();
+            const bool temp = !cfg->llm_no_temp && strstr(msg, "temperature");
+            const bool mct = !cfg->llm_mct && strstr(msg, "max_tokens") &&
+                             strstr(msg, "max_completion_tokens");
+            const bool think = cfg->llm_think != LLM_THINK_ASIS && cfg->llm_think != LLM_THINK_ROOM &&
+                               strstr(msg, "thinking");
+            if (temp || mct) {
+                cloud_cfg_llm_learned(temp, mct);
+                ESP_LOGW(TAG, "the model refused %s, sending the turn again",
+                         temp ? "temperature" : "max_tokens");
+                learned = true;
+            } else if (think) {
+                cloud_cfg_llm_thinks(msg);
+                ESP_LOGW(TAG, "the model will think, sending the turn again with room for it");
+                learned = true;
+            }
+        }
         free(msg);
         cloud_finish(slot, &resp, false);
-        return ESP_FAIL;
+        return learned ? ESP_ERR_INVALID_VERSION : ESP_FAIL;
     }
 
     char *io = cloud_psram_alloc(READ_BUF + 1024 + CLOUD_CHUNK_MAX + 1024);
@@ -240,12 +289,19 @@ static esp_err_t stream_once(const jw_t *w, cloud_reply_state_t *st, cloud_slot_
     cloud_chunker_t ck;
     chunker_init(&ck, chunk_store, CLOUD_CHUNK_MAX * 2);
 
+    // An Orion Hub sends each thing it says whole, in one burst: a filler
+    // while it works, then the answer. Cut at every comma and full stop like
+    // a token stream, each piece became its own TTS request, with its own
+    // intonation and a silence at every join. So from the hub the text is
+    // held and spoken in one request when the stream goes quiet: the hub
+    // sends a ": working" keep-alive right after each burst, or the end.
+    const bool whole = slot == CLOUD_SLOT_HUB;
     bool done = false;
     err = ESP_OK;
     while (!done && !cloud_cancelled()) {
         int n = cloud_read(&resp, io, SSE_READ);
         if (n <= 0) break;
-        progress();
+        cloud_progress();
         const char *p = io;
         size_t left = (size_t) n;
         sse_kind_t kind;
@@ -256,14 +312,23 @@ static esp_err_t stream_once(const jw_t *w, cloud_reply_state_t *st, cloud_slot_
                 if (!st->llm_first_ms) st->llm_first_ms = cloud_now_ms() - t0;
                 cloud_reply_append(st, delta);
                 chunker_feed(&ck, delta);
-                while (chunker_next(&ck, piece, CLOUD_CHUNK_MAX)) {
+                sse.quiet = false;
+                // A long answer still goes by sentences: one piece holds 1 KB.
+                while ((!whole || ck.len > 900) && chunker_next(&ck, piece, CLOUD_CHUNK_MAX)) {
                     cloud_speak_piece(st, piece);
                 }
             }
         }
+        if (whole && sse.quiet && !done && chunker_finish(&ck, piece, CLOUD_CHUNK_MAX)) {
+            cloud_speak_piece(st, piece);
+        }
     }
 
     const bool looked = sse.tool && strcmp(sse.tool_name, "look") == 0;
+    if (sse.listen && slot != CLOUD_SLOT_LLM) {
+        st->listen = true;
+        ESP_LOGI(TAG, "the brain asked a question: the reply needs no wake word");
+    }
     if (!looked && err == ESP_OK && done && chunker_finish(&ck, piece, CLOUD_CHUNK_MAX)) {
         cloud_speak_piece(st, piece);
     }
@@ -283,34 +348,67 @@ static esp_err_t stream_once(const jw_t *w, cloud_reply_state_t *st, cloud_slot_
 // The smallest real completion, for orion_cloud_test: one token, no stream.
 esp_err_t cloud_llm_ping(void)
 {
-    const cloud_cfg_t *cfg = cloud_cfg();
-    jw_t w;
-    if (!jw_init(&w, 256 + strlen(cfg->llm.model))) {
-        return ESP_ERR_NO_MEM;
+    // A second try when the server names max_completion_tokens: learned for
+    // the turns too.
+    for (int attempt = 0; attempt < 3; attempt++) {
+        const cloud_cfg_t *cfg = cloud_cfg();
+        jw_t w;
+        if (!jw_init(&w, 256 + strlen(cfg->llm.model))) {
+            return ESP_ERR_NO_MEM;
+        }
+        jw_raw(&w, "{");
+        jw_kv_str(&w, "model", cfg->llm.model);
+        // OpenAI's newer models spend tokens thinking first: one is not enough there.
+        jw_raw(&w, cfg->llm_mct ? ",\"max_completion_tokens\":16" : ",\"max_tokens\":1");
+        jw_raw(&w, think_field(cfg));
+        jw_raw(&w, ",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"Hi\"}]}");
+        body_t body = { .body = w.buf, .len = w.len };
+        cloud_req_t req = {
+            .url = cfg->llm.url, .method = HTTP_METHOD_POST,
+            .auth = cfg->llm.auth[0] ? cfg->llm.auth : NULL,
+            .content_type = "application/json", .body_len = (int) w.len,
+            .write_body = write_body, .ctx = &body,
+        };
+        cloud_resp_t resp;
+        esp_err_t err = cloud_send(CLOUD_SLOT_LLM, &req, &resp);
+        jw_free(&w);
+        if (err != ESP_OK) {
+            return err;
+        }
+        const int status = resp.status;
+        if (status == 400) {
+            char *msg = NULL;
+            size_t n = 0;
+            cloud_read_all(&resp, &msg, &n, 512);
+            const bool mct = !cfg->llm_mct && msg && strstr(msg, "max_tokens") &&
+                             strstr(msg, "max_completion_tokens");
+            const bool think = cfg->llm_think != LLM_THINK_ASIS && cfg->llm_think != LLM_THINK_ROOM &&
+                               msg && strstr(msg, "thinking");
+            if (think) cloud_cfg_llm_thinks(msg);
+            free(msg);
+            cloud_finish(CLOUD_SLOT_LLM, &resp, false);
+            if (mct) {
+                cloud_cfg_llm_learned(false, true);
+                continue;
+            }
+            if (think) {
+                continue;
+            }
+            return ESP_FAIL;
+        }
+        cloud_finish(CLOUD_SLOT_LLM, &resp, true);
+        return status == 200 ? ESP_OK : ESP_FAIL;
     }
-    jw_raw(&w, "{");
-    jw_kv_str(&w, "model", cfg->llm.model);
-    jw_raw(&w, ",\"max_tokens\":1,\"stream\":false,"
-               "\"messages\":[{\"role\":\"user\",\"content\":\"Hi\"}]}");
-    body_t body = { .body = w.buf, .len = w.len };
-    cloud_req_t req = {
-        .url = cfg->llm.url, .method = HTTP_METHOD_POST,
-        .auth = cfg->llm.auth[0] ? cfg->llm.auth : NULL,
-        .content_type = "application/json", .body_len = (int) w.len,
-        .write_body = write_body, .ctx = &body,
-    };
-    cloud_resp_t resp;
-    esp_err_t err = cloud_send(CLOUD_SLOT_LLM, &req, &resp);
-    jw_free(&w);
-    if (err != ESP_OK) {
-        return err;
-    }
-    const int status = resp.status;
-    cloud_finish(CLOUD_SLOT_LLM, &resp, true);
-    return status == 200 ? ESP_OK : ESP_FAIL;
+    return ESP_FAIL;
 }
 
-// The PC brain answers first, then the phone's, then the board's own model.
+static const char *brain_name(cloud_slot_t slot)
+{
+    return slot == CLOUD_SLOT_HUB ? "hub" : slot == CLOUD_SLOT_PC ? "pc" : "phone";
+}
+
+// An Orion Hub answers first, then the PC brain, then the phone's, then the
+// board's own model.
 // A brain that fails before a word has been spoken hands the same turn to the
 // next one: a PC or a phone being off or busy must never leave Orion silent.
 // The body is built for each target: a brain adds what it knows itself, the
@@ -318,7 +416,7 @@ esp_err_t cloud_llm_ping(void)
 static esp_err_t stream_turn(const char *text, bool tools, const uint8_t *jpeg, size_t jpeg_len,
                              cloud_reply_state_t *st)
 {
-    static const cloud_slot_t brains[] = { CLOUD_SLOT_PC, CLOUD_SLOT_PHONE };
+    static const cloud_slot_t brains[] = { CLOUD_SLOT_HUB, CLOUD_SLOT_PC, CLOUD_SLOT_PHONE };
     bool tried = false;
     jw_t w;
     esp_err_t err;
@@ -337,18 +435,21 @@ static esp_err_t stream_turn(const char *text, bool tools, const uint8_t *jpeg, 
             st->reply_len > 0) {
             return err;
         }
-        ESP_LOGW(TAG, "%s brain failed (%s), trying the next", brains[i] == CLOUD_SLOT_PC ? "pc" : "phone",
-                 esp_err_to_name(err));
+        ESP_LOGW(TAG, "%s brain failed (%s), trying the next", brain_name(brains[i]), esp_err_to_name(err));
         cloud_brain_failed(brains[i]);
         st->llm_first_ms = 0;
     }
-    if (!build(&w, text, tools, jpeg, jpeg_len, tried ? NOTE_NO_ANSWER : NOTE_ALONE)) {
+    // Twice more at most: a server can refuse one field, then the other.
+    for (int attempt = 0; attempt < 3; attempt++) {
+        if (!build(&w, text, tools, jpeg, jpeg_len, tried ? NOTE_NO_ANSWER : NOTE_ALONE)) {
+            jw_free(&w);
+            return ESP_ERR_NO_MEM;
+        }
+        err = stream_once(&w, st, CLOUD_SLOT_LLM);
         jw_free(&w);
-        return ESP_ERR_NO_MEM;
+        if (err != ESP_ERR_INVALID_VERSION) return err;
     }
-    err = stream_once(&w, st, CLOUD_SLOT_LLM);
-    jw_free(&w);
-    return err;
+    return ESP_FAIL;
 }
 
 static volatile bool s_look_next;
@@ -362,7 +463,8 @@ void orion_cloud_on_progress(void (*cb)(void))
 
 // At most every two seconds: anything read from the stream, a keep-alive
 // comment from a brain that is still clicking through an app included.
-static void progress(void)
+// Also called while a reply plays: a long answer is a sign of life too.
+void cloud_progress(void)
 {
     const uint32_t now = cloud_now_ms();
     if (s_progress && now - s_progress_ms > 2000) {
@@ -379,11 +481,12 @@ void orion_cloud_look_next(void)
 esp_err_t cloud_reply_run(const char *text, cloud_reply_state_t *st)
 {
     const cloud_cfg_t *cfg = cloud_cfg();
-    const bool tool_mode = strcmp(cfg->vision_mode, "tool") == 0;
+    // Never "tool": a model with a look tool took pictures it was not asked for.
+    // "off" turns even the words off; anything else is the words.
+    const bool tool_mode = false;
     const bool asked = s_look_next;
     s_look_next = false;
-    const bool look_first =
-        asked || ((tool_mode || strcmp(cfg->vision_mode, "keyword") == 0) && wants_camera(text));
+    const bool look_first = asked || (strcmp(cfg->vision_mode, "off") != 0 && wants_camera(text));
     esp_err_t err = ESP_ERR_NOT_FINISHED;
 
     if (!look_first) {

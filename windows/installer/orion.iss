@@ -1,11 +1,16 @@
 ; Orion for Windows, the setup program (Inno Setup 6.3 or later).
 ;
-; It installs for the current user, so it needs no admin rights, and it carries the
-; Microsoft C++ runtime next to orion.exe, so it runs on a PC that has never had the
-; Visual C++ Redistributable. See docs/RELEASING.md.
+; It installs for the current user, so it needs no admin rights, and carries
+; everything a new PC is missing next to orion.exe: the Microsoft C++ runtime, so it
+; runs without the Visual C++ Redistributable, and Node.js in {app}\node, which the
+; PC agent runs on (dsh and its MCP servers). That Node is Orion's own: it is not
+; put on the user's PATH, and it is removed with Orion. See docs/RELEASING.md.
 ;
-;   flutter build windows --release
-;   ISCC /DAppVersion=1.0.0 /DRedistDir="<VS>\VC\Redist\MSVC\<ver>\x64\Microsoft.VC145.CRT" windows\installer\orion.iss
+;   powershell -ExecutionPolicy Bypass -File windows\installer\build-installer.ps1
+;
+; builds the app, fetches and checks Node, and runs
+;
+;   ISCC /DAppVersion=1.0.0 /DRedistDir="<VS>\VC\Redist\MSVC\<ver>\x64\Microsoft.VC145.CRT" /DNodeDir="<node-vX-win-x64>" windows\installer\orion.iss
 ;
 ; The result is build\installer\Orion-<version>-windows-x64-setup.exe.
 
@@ -20,6 +25,9 @@
 #endif
 #ifndef RedistDir
   #error Pass /DRedistDir= the x64 Microsoft.VC14x.CRT folder of your Visual Studio
+#endif
+#ifndef NodeDir
+  #error Pass /DNodeDir= the unpacked node-vX-win-x64 folder (build-installer.ps1 does)
 #endif
 
 [Setup]
@@ -63,6 +71,15 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 Source: "{#RedistDir}\msvcp140.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#RedistDir}\vcruntime140.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#RedistDir}\vcruntime140_1.dll"; DestDir: "{app}"; Flags: ignoreversion
+; Node.js for the PC agent, replaced whole on an upgrade.
+Source: "{#NodeDir}\*"; DestDir: "{app}\node"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\node"
+
+[UninstallDelete]
+; Anything npm left beside the bundled Node.
+Type: filesandordirs; Name: "{app}\node"
 
 [Icons]
 Name: "{autoprograms}\Orion"; Filename: "{app}\orion.exe"
