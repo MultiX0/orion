@@ -2,6 +2,7 @@ import 'package:riverpod/riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/device/domain/device.dart';
+import '../network/orion_link.dart';
 import '../use_fakes.dart';
 import 'app_settings.dart';
 import 'in_memory_secret_store.dart';
@@ -52,6 +53,15 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
 
   Future<void> setTimeZoneAuto(bool on) =>
       edit((s) => s.copyWith(timeZoneAuto: on));
+
+  /// This install's Orion Link id, made and kept on first use.
+  Future<String> linkId(String kind) async {
+    final current = (await future).linkId;
+    if (OrionLink.isAppId(current)) return current!;
+    final id = OrionLink.newId(kind);
+    await edit((s) => s.copyWith(linkId: id));
+    return id;
+  }
 }
 
 @Riverpod(keepAlive: true)

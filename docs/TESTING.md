@@ -10,11 +10,11 @@ flutter analyze
 flutter test
 ```
 
-`test/` mirrors `lib/`. Fixtures recorded from real services and real boards are in `test/fixtures/` (model lists from DeepInfra, OpenAI, Anthropic and Ollama, Fish credit, WebSocket events, beacons, an ESP32 MJPEG capture, `route print` and `ip route` output, Windows Search and Start Menu output, `nvidia-smi` and `/proc` samples, a dsh settings file).
+`test/` mirrors `lib/`. Fixtures recorded from real services and real boards are in `test/fixtures/` (model lists from DeepInfra, OpenAI, Anthropic and Ollama, Fish credit, WebSocket events, beacons, an ESP32 MJPEG capture, `route print` and `ip route` output, Windows Search and Start Menu output, `nvidia-smi` and `/proc` samples, a dsh profile patch).
 
 | Area | Tests |
 |---|---|
-| Network | the MJPEG parser on real captures, the reconnecting socket (backoff, silence, sleep), discovery (every source, dedupe, confirmation), local address choice |
+| Network | the MJPEG parser on real captures, the reconnecting socket (backoff, silence, sleep), discovery (every source, dedupe, confirmation), following the paired board to a new address, local address choice |
 | Device | every WebSocket event type, the HTTP client |
 | Onboarding | Bluetooth mappers, the provisioning repository over a scripted board, the whole Bluetooth flow as a widget test, the LAN hand-over, pairing with a code |
 | Providers | model list parsing per provider, the model picker, the speech pickers, the board config repository against the real mock over HTTP (version 2 blocks, masking, the test endpoint, orion-config in parts), Fish |

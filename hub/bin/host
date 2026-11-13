@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# host <command...>: run a command on the host machine. In the container (pid: host, privileged) this
+# enters the host's namespaces through PID 1; outside a container it just runs the command here.
+set -euo pipefail
+if [ $# -eq 0 ]; then echo "usage: host <command>" >&2; exit 2; fi
+if [ "${ORION_HUB_CONTAINER:-0}" = "1" ]; then
+  if ! nsenter -t 1 -m -u -i -n -p -- true 2>/dev/null; then
+    echo "host: cannot reach the host (run the hub with pid: host and privileged: true)" >&2
+    exit 1
+  fi
+  exec nsenter -t 1 -m -u -i -n -p -- sh -c "$*"
+fi
+exec sh -c "$*"

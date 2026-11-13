@@ -189,6 +189,18 @@ void ui_on_pc_refresh(ui_tap_cb_t cb, void *ctx)
     ui_menu_on_pc_refresh(cb, ctx);
 }
 
+void ui_set_hub_info(ui_hub_t state, const char *name, const char *ip, const char *code)
+{
+    lvgl_port_lock(0);
+    ui_menu_set_hub(state, name, ip, code);
+    lvgl_port_unlock();
+}
+
+void ui_on_hub_action(ui_tap_cb_t cb, void *ctx)
+{
+    ui_menu_on_hub_action(cb, ctx);
+}
+
 void ui_show_setup(const char *device_name, const char *code)
 {
     lvgl_port_lock(0);

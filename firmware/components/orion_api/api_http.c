@@ -76,6 +76,23 @@ static esp_err_t h_info(httpd_req_t *req)
     return ESP_OK;
 }
 
+// Orion Link (docs/ORION_LINK.md): who answers at this address. Every node in
+// the ecosystem serves it without a token, so any other can check an address
+// it found, or an old one, before it trusts it.
+static esp_err_t h_wellknown(httpd_req_t *req)
+{
+    char name[33];
+    char esc[80];
+    api_device_name(name, sizeof(name));
+    api_json_escape(esc, sizeof(esc), name);
+    char body[256];
+    snprintf(body, sizeof(body),
+             "{\"orion\":1,\"id\":\"%s\",\"kind\":\"board\",\"name\":\"%s\",\"port\":%d,\"version\":\"%s\"}",
+             api_device_id(), esc, API_PORT, api_fw_version());
+    api_send_json(req, "200 OK", body);
+    return ESP_OK;
+}
+
 static esp_err_t h_state(httpd_req_t *req)
 {
     if (!api_authorized(req)) {
@@ -194,6 +211,7 @@ esp_err_t api_http_start(void)
     }
     const httpd_uri_t uris[] = {
         { .uri = "/api/info",      .method = HTTP_GET,  .handler = h_info },
+        { .uri = "/.well-known/orion", .method = HTTP_GET, .handler = h_wellknown },
         { .uri = "/api/state",     .method = HTTP_GET,  .handler = h_state },
         { .uri = "/api/provision", .method = HTTP_POST, .handler = h_provision },
         { .uri = "/api/restart",   .method = HTTP_POST, .handler = h_restart },
@@ -204,6 +222,7 @@ esp_err_t api_http_start(void)
     }
     api_config_register(s_hd);
     api_talk_register(s_hd);
+    api_hub_register(s_hd);
     api_ws_register(s_hd);
     api_cam_register(s_hd);
     ESP_LOGI(TAG, "http on port %d", API_PORT);

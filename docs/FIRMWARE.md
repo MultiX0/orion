@@ -1,6 +1,6 @@
 # Firmware
 
-The board's firmware: an ESP-IDF v5.5.5 project in `firmware/` for the LilyGO T-CameraPlus-S3 V1.2 (ESP32-S3, 16 MB flash, 8 MB quad PSRAM). C everywhere, C++17 only where TensorFlow Lite Micro needs it. The version comes from `firmware/version.txt` (currently `1.0.0`).
+The board's firmware: an ESP-IDF v5.5.5 project in `firmware/` for the LilyGO T-CameraPlus-S3 V1.2 (ESP32-S3, 16 MB flash, 8 MB quad PSRAM). C everywhere, C++17 only where TensorFlow Lite Micro needs it. The version comes from `firmware/version.txt` (currently `1.1.0`).
 
 By MultiX0 (https://github.com/MultiX0), under the PolyForm Noncommercial License 1.0.0. The boot log, `GET /api/info` and the wake word manifest all carry the author and the source.
 
@@ -238,7 +238,7 @@ Typed reads and writes of the NVS namespace `orion`. Secrets are reported by len
 | `pc_enabled` | i32 | PC control on | the desktop app |
 | `pc_url`, `pc_token` | string | the PC brain's address and the token the board sends it | the desktop app |
 | `pc_approval` | string | `ask` or `auto` | any app |
-| `vision_mode` | string | how the model gets the camera: `tool` (default: a question plainly about what is in front takes the picture first, anything else offers the `look` tool), `keyword` (only the picture-first phrases), `off` | `provision.py`, `cfg_set` |
+| `vision_mode` | string | the camera phrases: `off` turns them off; any other value (`tool`, the default, or `keyword`) takes the picture when a question asks for the camera in so many words | `provision.py`, `cfg_set` |
 | `wake_phrase` | string | written by `provision.py`; the phrase shown comes from the model manifest | `provision.py` |
 
 Older keys still read when their newer key is missing, so a board set up by an older build keeps working: `di_key` (the DeepInfra key, for the model and any DeepInfra stage), `fish_key`, `fish_voice`, `asr_provider` (`fish` or `deepinfra`), `asr_model`. When the app changes a stage, the matching older key is kept in step, so a cleared key never comes back through the fallback.
@@ -294,7 +294,7 @@ The OV2640 through `esp32-camera`: XCLK 20 MHz on LEDC timer 0 channel 0, its ow
 
 ### orion_cloud
 
-The voice loop's network side: speech to text (Fish streaming or OpenAI compatible), the streaming chat completion with the look tool, the chunker, text to speech into a PSRAM ring, kept-alive connections with prewarm, the PC and phone brains, and the settings reload and stage tests. See [FIRMWARE_CLOUD.md](FIRMWARE_CLOUD.md).
+The voice loop's network side: speech to text (Fish streaming or OpenAI compatible), the streaming chat completion with the camera on request, the chunker, text to speech into a PSRAM ring, kept-alive connections with prewarm, the Orion Hub, PC and phone brains, and the settings reload and stage tests. See [FIRMWARE_CLOUD.md](FIRMWARE_CLOUD.md).
 
 ### orion_ui
 

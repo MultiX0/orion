@@ -283,10 +283,11 @@ static void beacon_cb(void *arg)
     orion_net_ip(ip, sizeof(ip));
     api_device_name(name, sizeof(name));
     api_json_escape(esc, sizeof(esc), name);
-    char msg[200];
+    char msg[240];
     int n = snprintf(msg, sizeof(msg),
-                     "{\"orion\":1,\"device_id\":\"%s\",\"name\":\"%s\",\"fw\":\"%s\",\"ip\":\"%s\",\"port\":%d}",
-                     api_device_id(), esc, api_fw_version(), ip, API_PORT);
+                     "{\"orion\":1,\"id\":\"%s\",\"device_id\":\"%s\",\"kind\":\"board\",\"name\":\"%s\","
+                     "\"fw\":\"%s\",\"ip\":\"%s\",\"port\":%d}",
+                     api_device_id(), api_device_id(), esc, api_fw_version(), ip, API_PORT);
     struct sockaddr_in to = {
         .sin_family = AF_INET,
         .sin_port = htons(API_BEACON_PORT),
@@ -323,23 +324,34 @@ static void beacon_stop(void)
     }
 }
 
+// Started once, never freed: mdns_free() deletes the semaphore a running query
+// waits on, and the hub client waiting in one would hang for good.
 static void mdns_start(void)
 {
+    static bool s_mdns_up;
+    char name[33];
+    api_device_name(name, sizeof(name));
+    if (s_mdns_up) {
+        // Serving again after a Wi-Fi drop: only the name can have changed.
+        mdns_instance_name_set(name);
+        mdns_service_txt_item_set("_orion", "_tcp", "name", name);
+        return;
+    }
     esp_err_t err = mdns_init();
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "mdns init: %s", esp_err_to_name(err));
         return;
     }
-    char name[33];
-    api_device_name(name, sizeof(name));
+    s_mdns_up = true;
     mdns_hostname_set("orion");
     mdns_instance_name_set(name);
     mdns_txt_item_t txt[] = {
         { "id", api_device_id() },
         { "name", name },
         { "fw", api_fw_version() },
+        { "kind", "board" },
     };
-    err = mdns_service_add(NULL, "_orion", "_tcp", API_PORT, txt, 3);
+    err = mdns_service_add(NULL, "_orion", "_tcp", API_PORT, txt, 4);
     ESP_LOGI(TAG, "mdns orion.local, _orion._tcp id=%s name=%s fw=%s: %s",
              api_device_id(), name, api_fw_version(), esp_err_to_name(err));
 }
@@ -381,7 +393,7 @@ static void serve(bool on)
         s_serving = false;
         api_ws_links_stop();
         beacon_stop();
-        mdns_free();
+        // mDNS stays up (see mdns_start) and reopens its sockets with Wi-Fi.
         api_http_stop();
         ESP_LOGI(TAG, "stopped, heap int %u", (unsigned) heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
     }

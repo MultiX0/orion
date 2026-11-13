@@ -225,9 +225,21 @@ static float limit(float x)
     return oldest * s_lim_gain;
 }
 
+// Set by the speaker from what the supply can give (audio_spk.c). Applied
+// last, after the limiter, so it scales the peaks the amplifier draws, and
+// eased per sample so a step never clicks.
+static volatile float s_supply_target = 1.0f;
+static float s_supply_gain = 1.0f;
+
+void audio_dsp_set_supply_db(float db)
+{
+    s_supply_target = powf(10.0f, db / 20.0f);
+}
+
 void audio_dsp_process(const int16_t *in, int16_t *out, size_t n)
 {
     float makeup = powf(10.0f, (s_makeup_db + s_guard_db) / 20.0f);
+    const float supply = s_supply_target;
     for (size_t i = 0; i < n; i++) {
         float x = in[i] / 32768.0f;
         float ax = fabsf(x);
@@ -247,6 +259,10 @@ void audio_dsp_process(const int16_t *in, int16_t *out, size_t n)
             y = limit(y * makeup);
             guard_update(y);
         }
+        // About 2 ms to settle: fast enough to catch a sag, slow enough not
+        // to be heard as a step.
+        s_supply_gain += (supply - s_supply_gain) * 0.015f;
+        y *= s_supply_gain;
         float ay = fabsf(y);
         s_stats.out_peak = ay > s_stats.out_peak ? ay : s_stats.out_peak;
         s_stats.out_sq += y * y;

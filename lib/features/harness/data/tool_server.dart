@@ -8,6 +8,7 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../../core/network/orion_link.dart';
 import '../domain/harness_call.dart';
 import '../domain/tool_request.dart';
 import '../domain/tool_spec.dart';
@@ -23,6 +24,7 @@ class ToolServer {
     required this.token,
     required this.agentLogs,
     this.chat,
+    this.identity,
     this.port = 7331,
   });
 
@@ -50,6 +52,11 @@ class ToolServer {
   final String? Function() token;
 
   final int port;
+
+  /// Orion Link (docs/ORION_LINK.md): who this node is, given the port it
+  /// got. Served at /.well-known/orion without a token, so the board can
+  /// check an address before it trusts it. Null answers 404.
+  final Map<String, dynamic>? Function(int port)? identity;
 
   HttpServer? _server;
 
@@ -200,6 +207,12 @@ class ToolServer {
   }
 
   Handler _auth(Handler inner) => (Request request) {
+    // Who answers here is not a secret, and is asked before any token is.
+    if (request.method == 'GET' &&
+        '/${request.url.path}' == OrionLink.wellKnownPath) {
+      final me = identity?.call(boundPort ?? port);
+      return me == null ? _error(404, 'Not found') : _json(me);
+    }
     final expected = token();
     if (expected == null || expected.isEmpty) {
       return _error(401, 'This PC is not paired with a board yet');

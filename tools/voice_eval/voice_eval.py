@@ -26,7 +26,7 @@ from cases import CASES, LOOK_TOOL, NOTE_ALONE, NOW
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 PROMPT_PATH = "firmware/assets/system_prompt.txt"
-DEFAULT_ENV = Path(r"C:\Users\multix\Desktop\Dev\yt-projects\orion\.env")
+DEFAULT_ENV = REPO / ".env"
 URL = "https://api.deepinfra.com/v1/openai/chat/completions"
 MODEL = "google/gemma-4-31B-it-turbo"
 

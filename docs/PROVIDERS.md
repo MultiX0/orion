@@ -6,7 +6,7 @@ A turn has three stages, and each can come from a different provider:
 |---|---|---|
 | Language model | DeepInfra: `google/gemma-4-31B-it-turbo` to answer, `zai-org/GLM-5.3-Flash` to think | any OpenAI compatible endpoint |
 | Speech to text | Fish Audio `transcribe-1` | Fish (`transcribe-1`, `transcribe-1-pro`) or any OpenAI compatible `/audio/transcriptions` |
-| Text to speech | Fish Audio `s2.1-pro-free`, Orion Voice | Fish (`s2.1-pro-free`, `s2.1-pro`, `s2-pro`, `s1`) or any OpenAI compatible `/audio/speech` |
+| Text to speech | Fish Audio `drama-3`, Orion Voice | Fish (`drama-3`, `s2.1-pro`, `s2.1-pro-free`, `s2-pro`, `s1`) or any OpenAI compatible `/audio/speech` |
 
 All three are chosen in the app: in onboarding ("Brain and voice") and later under Providers. The board stores them and uses them from the next turn; the PC and phone brains use the same language model settings. Keys live in the OS keychain on the app side and in NVS on the board, nowhere else.
 
@@ -24,7 +24,21 @@ Every provider is treated as OpenAI compatible: `GET <base>/models` to list, `PO
 | Ollama | `http://localhost:11434/v1` | no key; the app also reads `/api/tags` for model details |
 | Custom | yours | must be OpenAI compatible |
 
-Base URLs are editable.
+Base URLs are editable. Any of them can be the board's own model: pick it in the app, with its key and model, and the board uses it from the next turn.
+
+**What each provider takes.** The OpenAI shape is not quite one shape any more, so the board (`cloud_cfg.c`, `cloud_reply.c`) and the app (`request_fields.dart`) adjust the request to the provider:
+
+| | `temperature` | token limit | thinking |
+|---|---|---|---|
+| Anthropic | left out (newer Claude models refuse it) | `max_tokens` | turned off for a spoken answer, see below |
+| OpenAI | left out (newer models refuse it) | `max_completion_tokens`: 2000 from the board, room for a reasoning model to think; at least 200 from the app | |
+| Everyone else | `0.6` | `max_tokens` | |
+
+A provider the board has no rule for, behind Custom or OpenRouter, is learned from its first 400: an error that names `temperature`, or `max_tokens` together with `max_completion_tokens`, leaves the field out or renames it, and the same turn goes again at once. Learned until the next config change on the board, and for as long as the app runs on its side.
+
+**Claude thinks by default, out of the same token limit.** The board allows 200 tokens for a spoken answer, and Claude Haiku 5.5 sometimes spent all of them thinking and answered nothing (`finish_reason: "length"` with no text, half the time on a repeated question). So the board's own turns and the brains' first model send `"thinking": {"type": "disabled"}` to Anthropic. A model that refuses it is learned from its 400 as well: Claude Sonnet 5.5 names `between_tools`, and gets that; Claude Opus 5.5 cannot stop thinking, so nothing is sent and the limit becomes 2000. The thinking model of the PC and phone brains keeps thinking.
+
+Measured on the board with Claude Haiku 5.5 and thinking off: about 1 to 2.5 s to the first word, five Arabic answers out of five. Sonnet 5.5 and Opus 5.5 each worked on the first turn after their model test had learned the rule.
 
 **For the board, `localhost` is the board itself.** A model served on your PC (Ollama or anything else) must be given to the board by the PC's LAN address, for example `http://192.168.1.20:11434/v1`, and the server must listen on the network, not only on loopback. The board allows plain `http://` for this.
 
@@ -61,7 +75,7 @@ Fish is streamed while you talk and is the fastest by far (about 0.4 s after the
 
 | Preset | Provider on the board | Base URL | Model | Voice |
 |---|---|---|---|---|
-| Fish Audio | `fish` | | `s2.1-pro-free` | Orion Voice |
+| Fish Audio | `fish` | | `drama-3` | Orion Voice |
 | DeepInfra | `openai_compatible` | `https://api.deepinfra.com/v1/openai` | `Qwen/Qwen3-TTS` | `Serena` |
 | OpenAI | `openai_compatible` | `https://api.openai.com/v1` | `gpt-4o-mini-tts` | `alloy` |
 | Custom | `openai_compatible` | yours | yours | yours |
@@ -87,7 +101,7 @@ Base URL `https://api.fish.audio`, bearer key from https://fish.audio/?fpr=ipdev
 
 Money, as it works today:
 
-- **Text to speech on `s2.1-pro-free` is free**, with no hard cap under Fish's fair use policy, in 83 languages. It is the intended production model, not a workaround. The paid models (`s2.1-pro`, `s2-pro`, `s1`) answer 402 on an account with no API credit.
+- **Text to speech uses Drama 3 (`drama-3`) by default**, which bills API credit. In tests it started speaking about 1.4 s after a request, against about 0.5 s for `s2.1-pro`. The paid models answer 402 on an account with no API credit; `s2.1-pro-free` is free, with no hard cap under Fish's fair use policy, and can be picked in the app.
 - **Speech to text is billed**: $0.36 per hour of audio for `transcribe-1` and `transcribe-1-pro`. $1 is about 2.8 hours of listening, or about 2,500 questions of 4 seconds. There is no free speech to text model; with no credit every path answers 402.
 - **API credit is separate from a Fish plan's package credit.** A plan's credit pays for the web app and Fish's MCP server, not for API calls. Add API credit at https://fish.audio/app/developers.
 - The app says all of this in the speech to text card, and turns a Fish 402 on Test into "this account has no API credit".

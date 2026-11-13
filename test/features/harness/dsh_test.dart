@@ -8,9 +8,15 @@ import 'package:orion/features/harness/data/dsh/dsh_paths.dart';
 import 'package:orion/features/harness/data/dsh/dsh_probe.dart';
 import 'package:orion/features/harness/data/dsh/dsh_runtime.dart';
 import 'package:orion/features/harness/data/dsh/null_runtime.dart';
+import 'package:orion/features/harness/data/confirmation_queue.dart';
 import 'package:orion/features/harness/data/native_tools/process_runner.dart';
+import 'package:orion/features/harness/data/tool_executor.dart';
+import 'package:orion/features/harness/domain/approval_mode.dart';
+import 'package:orion/features/providers/data/fake_provider_repository.dart';
 import 'package:orion/features/providers/domain/llm_provider.dart';
 import 'package:orion/features/providers/domain/provider_kind.dart';
+
+import '../../support/stub_tools.dart';
 
 const _provider = LlmProvider(
   id: 'deepinfra',
@@ -43,18 +49,37 @@ class ScriptedRunner implements ProcessRunner {
   }
 }
 
+/// A first `npx` that is still downloading dsh.
+class _StuckRunner implements ProcessRunner {
+  @override
+  Future<ProcResult> run(
+    String executable,
+    List<String> arguments, {
+    Duration timeout = const Duration(seconds: 10),
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool shell = false,
+  }) => Completer<ProcResult>().future;
+}
+
 void main() {
-  group('settings.yaml', () {
-    test('matches the shape dsh documents', () {
+  group('the profile patch', () {
+    test('matches the shape dsh 0.2.2 applies, desktop control included', () {
       expect(
-        DshConfigWriter.settingsYaml(_provider.baseUrl, _model),
-        _lf(File('test/fixtures/dsh_settings.yaml').readAsStringSync()),
+        DshConfigWriter.patchYaml(
+          _provider,
+          _model,
+          desktop: true,
+          windows: true,
+          downloads: 'C:/Users/ada/Downloads',
+        ),
+        _lf(File('test/fixtures/dsh_profile_patch.yml').readAsStringSync()),
       );
     });
 
     test('quotes scalars, so a model id keeps its slashes and colons', () {
-      final yaml = DshConfigWriter.settingsYaml(
-        'http://localhost:11434/v1',
+      final yaml = DshConfigWriter.patchYaml(
+        _provider.copyWith(baseUrl: 'http://localhost:11434/v1'),
         "qwen2.5-coder:32b'weird",
       );
 
@@ -63,11 +88,77 @@ void main() {
     });
 
     test('the key goes to .env by name, never into the yaml', () {
-      final yaml = DshConfigWriter.settingsYaml(_provider.baseUrl, _model);
+      final yaml = DshConfigWriter.patchYaml(_provider, _model);
 
       expect(yaml, contains('apiKeyEnv: DP_ORION_KEY'));
       expect(yaml, isNot(contains('sk-')));
       expect(DshConfigWriter.envFileBody('sk-abc'), 'DP_ORION_KEY=sk-abc\n');
+    });
+
+    test(
+      'Anthropic and OpenAI use dsh\'s own routes, which know their models',
+      () {
+        const anthropic = LlmProvider(
+          id: 'anthropic',
+          kind: ProviderKind.anthropic,
+          name: 'Anthropic',
+          baseUrl: 'https://api.anthropic.com/v1',
+        );
+        final a = DshConfigWriter.patchYaml(anthropic, 'claude-haiku-5-5');
+        expect(
+          a,
+          contains('      anthropic:\n        apiKeyEnv: DP_ORION_KEY\n'),
+        );
+        expect(a, contains('    provider: anthropic\n'));
+        expect(a, isNot(contains('openai-completions')));
+        expect(a, isNot(contains('baseURL')));
+
+        const openai = LlmProvider(
+          id: 'openai',
+          kind: ProviderKind.openai,
+          name: 'OpenAI',
+          baseUrl: 'https://api.openai.com/v1',
+        );
+        final o = DshConfigWriter.patchYaml(openai, 'gpt-5-mini');
+        expect(o, contains('    provider: openai\n'));
+        expect(o, isNot(contains('baseURL')));
+      },
+    );
+
+    test(
+      'off Windows: Cua Driver for applications, Chrome for the browser',
+      () {
+        final yaml = DshConfigWriter.patchYaml(
+          _provider,
+          _model,
+          desktop: true,
+          cua: true,
+        );
+        expect(yaml, contains(DshConfigWriter.desktopPlugins.last));
+        expect(yaml, contains("'chrome'"));
+        expect(yaml, isNot(contains('winapp')));
+      },
+    );
+
+    test('every desktop server is pinned to an exact version', () {
+      final yaml = DshConfigWriter.patchYaml(
+        _provider,
+        _model,
+        desktop: true,
+        windows: true,
+      );
+      expect(yaml, contains("'${DshConfigWriter.playwrightMcp}'"));
+      expect(yaml, contains("'${DshConfigWriter.winappMcp}'"));
+      final exact = RegExp(r'@\d+\.\d+\.\d+$');
+      expect(DshConfigWriter.playwrightMcp, matches(exact));
+      expect(DshConfigWriter.winappMcp, matches(exact));
+    });
+
+    test('without desktop control there are no computer-use plugins', () {
+      expect(
+        DshConfigWriter.patchYaml(_provider, _model),
+        isNot(contains('computer-use')),
+      );
     });
   });
 
@@ -135,8 +226,37 @@ void main() {
       final second = await probe.versions();
 
       expect(second.dsh, '0.4.1');
-      expect(runner.calls, <String>['node', 'npx']);
+      // One probe; the npx calls after it fetch the MCP servers in the
+      // background.
+      expect(runner.calls.take(2), <String>['node', 'npx']);
+      expect(runner.calls.where((c) => c == 'node'), hasLength(1));
     });
+
+    test(
+      'the tool list never waits on a probe that is still running',
+      () async {
+        final queue = ConfirmationQueue();
+        addTearDown(queue.dispose);
+        final executor = ToolExecutor(
+          tools: StubTools(),
+          agent: DshRuntime(
+            paths: DshPaths(Directory.systemTemp.path),
+            probe: DshProbe(runner: _StuckRunner()),
+          ),
+          queue: queue,
+          brain: () async => null,
+          localApproval: () => ApprovalMode.ask,
+          describe: FakeProviderRepository(),
+          onUpdate: (_) {},
+          onAgentLog: (_, _) {},
+        );
+        final clock = Stopwatch()..start();
+        final names = (await executor.catalog()).map((t) => t.name).toList();
+        expect(clock.elapsed, lessThan(const Duration(seconds: 2)));
+        expect(names, isNot(contains('agent_task')));
+        expect(names, contains('open_app'));
+      },
+    );
   });
 
   group('NullRuntime', () {
@@ -181,15 +301,18 @@ void main() {
       late List<String> args;
       late String? cwd;
       late Map<String, String>? env;
+      late String? given;
       final runtime = runtimeWith((
         executable,
         arguments, {
         workingDirectory,
         environment,
+        stdin,
       }) async {
         args = <String>[executable, ...arguments];
         cwd = workingDirectory;
         env = environment;
+        given = stdin;
         return AgentProcess(
           stdoutLines: Stream<String>.value('All tidy.'),
           stderrLines: const Stream<String>.empty(),
@@ -208,23 +331,204 @@ void main() {
       expect(args, <String>[
         'npx',
         '-y',
-        '@deepseek-ai/dsh',
+        DshRuntime.dshPackage,
         '--profile',
         'headless',
-        'tidy my desktop',
+        '-',
       ]);
+      // The task travels on stdin, never on a command line cmd would parse.
+      expect(given, '${DshRuntime.taskPreamble}tidy my desktop');
       expect(cwd, paths.sandbox);
       expect(env!['DSH_HOME'], paths.dshHome);
       expect(env!['DSH_PERMISSION_MODE'], 'workspace-write');
       expect(env![DshConfigWriter.apiKeyEnv], _provider.apiKey);
       expect(result.ok, isTrue);
       expect(result.text, 'All tidy.');
-      expect(File(paths.settingsFile).existsSync(), isTrue);
+      expect(File(paths.profilePatch('headless')).existsSync(), isTrue);
+    });
+
+    test(
+      'desktop control: plugins installed once, then full access in the home folder',
+      () async {
+        final calls = <(List<String>, String?, Map<String, String>?)>[];
+        final runtime = DshRuntime(
+          paths: paths,
+          desktop: true,
+          windows: false,
+          home: temp.path,
+          probe: DshProbe(
+            runner: ScriptedRunner(const <String, ProcResult>{
+              'node': ProcResult(0, 'v24.2.0', ''),
+              'npx': ProcResult(0, '0.4.1', ''),
+            }),
+          ),
+          launcher:
+              (
+                executable,
+                arguments, {
+                workingDirectory,
+                environment,
+                stdin,
+              }) async {
+                calls.add((
+                  <String>[executable, ...arguments],
+                  workingDirectory,
+                  environment,
+                ));
+                if (arguments.contains('plugin')) {
+                  // What pnpm leaves behind: the provider's package in the profile.
+                  final f = File(
+                    [
+                      paths.profileDir('headless'),
+                      'node_modules',
+                      ...DshConfigWriter.desktopPlugins.last.split('/'),
+                      'package.json',
+                    ].join(Platform.pathSeparator),
+                  );
+                  f.createSync(recursive: true);
+                  f.writeAsStringSync('{}');
+                }
+                return AgentProcess(
+                  stdoutLines: Stream<String>.value(
+                    'Downloading it in Chrome.',
+                  ),
+                  stderrLines: const Stream<String>.empty(),
+                  exitCode: Future<int>.value(0),
+                  kill: () {},
+                );
+              },
+        );
+
+        final first = await runtime.run(
+          'download debian',
+          provider: _provider,
+          model: _model,
+        );
+        await first.done;
+        final second = await runtime.run(
+          'again',
+          provider: _provider,
+          model: _model,
+        );
+        await second.done;
+
+        final installs = calls.where((c) => c.$1.contains('plugin')).toList();
+        expect(installs, hasLength(1));
+        expect(
+          installs.single.$1,
+          containsAll(<String>[
+            DshRuntime.dshPackage,
+            'add',
+            for (final p in DshConfigWriter.desktopPlugins)
+              '$p@${DshRuntime.dshVersion}',
+          ]),
+        );
+        final runs = calls.where((c) => !c.$1.contains('plugin')).toList();
+        expect(runs, hasLength(2));
+        expect(runs.first.$2, temp.path);
+        expect(runs.first.$3!['DSH_PERMISSION_MODE'], 'danger-full-access');
+        expect(
+          File(paths.profilePatch('headless')).readAsStringSync(),
+          contains(DshConfigWriter.desktopPlugins.last),
+        );
+      },
+    );
+
+    test(
+      'desktop control that cannot be installed leaves the agent working without it',
+      () async {
+        final calls = <List<String>>[];
+        final runtime = DshRuntime(
+          paths: paths,
+          desktop: true,
+          windows: false,
+          home: temp.path,
+          probe: DshProbe(
+            runner: ScriptedRunner(const <String, ProcResult>{
+              'node': ProcResult(0, 'v24.2.0', ''),
+              'npx': ProcResult(0, '0.4.1', ''),
+            }),
+          ),
+          launcher:
+              (
+                executable,
+                arguments, {
+                workingDirectory,
+                environment,
+                stdin,
+              }) async {
+                calls.add(<String>[executable, ...arguments]);
+                return AgentProcess(
+                  stdoutLines: const Stream<String>.empty(),
+                  stderrLines: Stream<String>.value('pnpm: offline'),
+                  exitCode: Future<int>.value(
+                    arguments.contains('plugin') ? 1 : 0,
+                  ),
+                  kill: () {},
+                );
+              },
+        );
+
+        await (await runtime.run('x', provider: _provider, model: _model)).done;
+        expect(
+          File(paths.profilePatch('headless')).readAsStringSync(),
+          isNot(contains('computer-use')),
+        );
+        // Still full access: the setting decides that, not the plugins.
+        expect(
+          calls.last,
+          containsAll(<String>['--permission-mode', 'danger-full-access']),
+        );
+      },
+    );
+
+    test('on Windows: no install, winapp and Edge, full access', () async {
+      final calls = <List<String>>[];
+      final runtime = DshRuntime(
+        paths: paths,
+        desktop: true,
+        windows: true,
+        home: temp.path,
+        probe: DshProbe(
+          runner: ScriptedRunner(const <String, ProcResult>{
+            'node': ProcResult(0, 'v24.2.0', ''),
+            'npx': ProcResult(0, '0.4.1', ''),
+          }),
+        ),
+        launcher:
+            (
+              executable,
+              arguments, {
+              workingDirectory,
+              environment,
+              stdin,
+            }) async {
+              calls.add(<String>[executable, ...arguments]);
+              return AgentProcess(
+                stdoutLines: Stream<String>.value('Done.'),
+                stderrLines: const Stream<String>.empty(),
+                exitCode: Future<int>.value(0),
+                kill: () {},
+              );
+            },
+      );
+
+      await (await runtime.run('x', provider: _provider, model: _model)).done;
+      expect(calls, hasLength(1));
+      expect(calls.single, isNot(contains('plugin')));
+      expect(
+        calls.single,
+        containsAll(<String>['--permission-mode', 'danger-full-access']),
+      );
+      final patch = File(paths.profilePatch('headless')).readAsStringSync();
+      expect(patch, contains(DshConfigWriter.winappMcp));
+      expect(patch, contains("'msedge'"));
+      expect(patch, isNot(contains(DshConfigWriter.desktopPlugins.last)));
     });
 
     test('a non-zero exit is a failed job, not a thrown error', () async {
       final runtime = runtimeWith(
-        (executable, arguments, {workingDirectory, environment}) async =>
+        (executable, arguments, {workingDirectory, environment, stdin}) async =>
             AgentProcess(
               stdoutLines: const Stream<String>.empty(),
               stderrLines: Stream<String>.value('dsh: reasoning: hmm'),
@@ -242,7 +546,7 @@ void main() {
 
     test('a launcher that throws becomes a failed job', () async {
       final runtime = runtimeWith(
-        (executable, arguments, {workingDirectory, environment}) async =>
+        (executable, arguments, {workingDirectory, environment, stdin}) async =>
             throw const ProcessException('npx', <String>[]),
       );
 
@@ -253,7 +557,7 @@ void main() {
 
     test('stderr and stdout both reach the job log', () async {
       final runtime = runtimeWith(
-        (executable, arguments, {workingDirectory, environment}) async =>
+        (executable, arguments, {workingDirectory, environment, stdin}) async =>
             AgentProcess(
               stdoutLines: Stream<String>.fromIterable(<String>['done']),
               stderrLines: Stream<String>.fromIterable(<String>['step one']),

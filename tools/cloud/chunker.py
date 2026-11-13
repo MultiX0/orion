@@ -30,6 +30,8 @@ CLAUSE_END = set(",،;؛:")         # , ، ; ؛ :
 TAG = re.compile(r"\[[^\]]*\]")
 # A model's control token leaked into the text: "<turn|>", "<|im_end|>".
 MODEL_TOKEN = re.compile(r"<[A-Za-z_|/]{1,24}>")
+# A marker a model makes up between pipes, "|speaking|" or "|pause|": the voice would read it.
+PIPE_MARKER = re.compile(r"\|[A-Za-z_\- ]{1,24}\|\s*")
 
 
 def speakable(text):
@@ -120,6 +122,7 @@ class Chunker:
     def _emit(self, piece, mid_sentence):
         carried = self.carry
         piece = MODEL_TOKEN.sub("", piece)
+        piece = PIPE_MARKER.sub("", piece)
         text = (carried + " " + piece.strip()) if carried else piece.strip()
         self.carry = ""
         if mid_sentence:

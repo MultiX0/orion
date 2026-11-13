@@ -5,11 +5,17 @@ Run in Blender after render_setup.py:
 Uses the plain stand with a USB-C plug in the neck; the dock is hidden.
 Writes case/renders/front.png, back.png, exploded.png.
 """
+import os
+
 import bpy
 from mathutils import Vector
 
-RS = {}
-exec(open(r"C:\Users\multix\Desktop\Dev\yt-projects\orion\case\blender\render_setup.py").read().split("\nmaterials()")[0], RS)
+try:
+    HERE = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    HERE = os.path.join(os.environ.get("ORION_ROOT", os.getcwd()), "case", "blender")
+RS = {"__file__": os.path.join(HERE, "render_setup.py")}
+exec(open(RS["__file__"]).read().split("\nmaterials()")[0], RS)
 render, camera = RS["render"], RS["camera"]
 
 # board-frame offsets for the exploded view (x, y, z in mm)

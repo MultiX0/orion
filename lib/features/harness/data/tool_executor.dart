@@ -57,7 +57,12 @@ class ToolExecutor {
   /// The tools this machine can actually offer right now.
   Future<List<ToolSpec>> catalog() async => ToolCatalog.available(
     hasNativeTools: tools.isSupported,
-    hasAgent: await agent.isAvailable(),
+    // Never waits on a dsh probe: the board gives GET /tools 3 s, and every
+    // turn asks. A probe still running means no agent for now.
+    hasAgent: await agent.isAvailable().timeout(
+      const Duration(milliseconds: 300),
+      onTimeout: () => false,
+    ),
     hasControl: control != null,
   );
 

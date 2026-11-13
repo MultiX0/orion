@@ -242,6 +242,21 @@ esp_err_t orion_settings_test(const char *stage, char *out, size_t out_len)
     return e;
 }
 
+// The PC brain's settings from the copy in RAM: safe on any task, a PSRAM
+// stack included, since nothing here reads flash.
+bool orion_settings_pc(char *url, size_t url_len, char *token, size_t token_len)
+{
+    if (!s_cur) {
+        return false;
+    }
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    const bool on = s_cur->pc.enabled;
+    if (url) strlcpy(url, s_cur->pc.url, url_len);
+    if (token) strlcpy(token, s_cur->pc.token, token_len);
+    xSemaphoreGive(s_lock);
+    return on;
+}
+
 void orion_settings_basic(char *name, size_t name_len, int32_t *volume, bool *wake_word)
 {
     if (!s_cur) {

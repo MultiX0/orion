@@ -9,7 +9,7 @@ How Orion sounds and how it talks: the voice on Fish Audio, the languages, the e
 | Name on Fish Audio | Orion Voice |
 | Voice id | `9a68c1d739134940a4297c996c5ca6a1` |
 | Visibility | unlisted: any Fish key can use it by id, it does not show in library searches |
-| Model | `s2.1-pro-free` (Fish S2.1 Pro, free tier) |
+| Model | `drama-3` (Fish Drama 3, paid API credit); `s2.1-pro` is the faster paid one, `s2.1-pro-free` the free tier |
 | Character | soft, warm and gentle; natural Arabic with a light Saudi accent, natural English; says its name the English way |
 
 Orion Voice is the project's own voice, made with Fish Voice Design (`voice-design-1`, about $0.01 a request) from a written description: two rounds of six candidates, the final one picked by ear, then published on Fish with the Orion star as its cover. It is the default everywhere: in the firmware when no voice is stored, in `tools/cloud/provision.py`, in the app, and in the mock board. The app offers no other Fish voice.
@@ -38,7 +38,7 @@ From the system prompt:
 - **Brand and tech names** stay in Latin letters inside Arabic: Spotify، Wi-Fi، YouTube، PC.
 - **Short**: one or two sentences, under about twenty words. Answer, then stop.
 - **Speakable**: numbers, times, dates and units as words; no markdown, lists, emoji, parentheses or code.
-- **Honest**: no reminders or timers (say so in one sentence); never guess what is in front of the camera (call the look tool); never invent the time, weather or news (they are given when known, or tools fetch them); if unsure, say so.
+- **Honest**: no reminders or timers (say so in one sentence); never guess what is in front of the camera (the picture comes only when asked for, "take a photo"); never invent the time, weather or news (they are given when known, or tools fetch them); if unsure, say so.
 - **Self-knowledge**: asked what it is, two sentences: its name, a home assistant on its own small board with a camera, screen, microphone and speaker, and that its voice comes from Fish Audio. The hardware list only when asked about the hardware. The language model is never named, because the owner can switch it.
 
 The prompt was tested with ten Arabic and five English questions per revision, checking what breaks speech (digits, markdown, length, the wrong language). The first Modern Standard Arabic draft scored 13 of 14 but tagged nearly every reply and answered one joke in Gulf dialect; the revision scored 14 of 14 with tags on 6 of 14 replies, and the median spoken reply fell from 5.8 s to 4.3 s.
@@ -109,6 +109,6 @@ Short sounds from `/assets/earcons/`, all in Orion Voice except the chime. See [
 | `latency: balanced` | the default `normal` was four times slower to first audio (2868 ms against 639 ms median) |
 | no `prosody` object | sending one costs about 9 dB of loudness; the plain body is the loudest option |
 | 32 kHz | 16 kHz cuts off at 8 kHz, where a soft voice keeps much of its consonants; the amplifier cannot lock to 24 kHz; the voice has almost nothing above 10 kHz, so 44.1 kHz adds nothing |
-| model in the `model` header | how Fish picks the model; `s2.1-pro-free` is the free tier |
+| model in the `model` header | how Fish picks the model: `drama-3` by default |
 
 Generation varies: identical text peaks 2 to 4 dB apart between takes, so the board's playback path must expect samples near full scale.

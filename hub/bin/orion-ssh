@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# orion-ssh: SSH logins the agent can use without ever hanging on a prompt.
+#   orion-ssh login <alias> <user@host[:port]> <password>   checks the login, then saves it
+#   orion-ssh run <alias> <command...>                      runs a command there (60 s limit)
+#   orion-ssh list                                          saved logins, without passwords
+#   orion-ssh forget <alias>
+# Logins are kept in $ORION_HUB_STATE_DIR/ssh/vault.json, mode 0600, never in the agent's notes.
+# The password reaches ssh through SSHPASS in the environment, not on a command line.
+set -uo pipefail
+STATE="${ORION_HUB_STATE_DIR:-/var/lib/orion-hub}/ssh"
+VAULT="$STATE/vault.json"
+mkdir -p "$STATE" && chmod 700 "$STATE"
+[ -f "$VAULT" ] || { echo '{}' > "$VAULT"; chmod 600 "$VAULT"; }
+
+ssh_opts=(-o StrictHostKeyChecking=accept-new -o "UserKnownHostsFile=$STATE/known_hosts"
+          -o ConnectTimeout=8 -o ServerAliveInterval=10 -o ServerAliveCountMax=2
+          -o PreferredAuthentications=password,keyboard-interactive -o PubkeyAuthentication=no
+          -o NumberOfPasswordPrompts=1 -o LogLevel=ERROR)
+
+valid_alias() { [[ "$1" =~ ^[A-Za-z0-9_.-]{1,32}$ ]]; }
+
+save_vault() {
+  # $1: a jq filter, the rest: jq arguments. Written through a temp file so a crash never truncates it.
+  local filter="$1"; shift
+  local tmp
+  tmp=$(mktemp "$STATE/vault.XXXXXX")
+  if jq "$@" "$filter" "$VAULT" > "$tmp"; then
+    chmod 600 "$tmp" && mv "$tmp" "$VAULT"
+  else
+    rm -f "$tmp"; return 1
+  fi
+}
+
+case "${1:-}" in
+  login)
+    [ $# -ge 4 ] || { echo "usage: orion-ssh login <alias> <user@host[:port]> <password>" >&2; exit 2; }
+    alias="$2"; target="$3"; pw="$4"
+    valid_alias "$alias" || { echo "orion-ssh: alias may use letters, digits, . _ - only" >&2; exit 2; }
+    user="${target%@*}"; hostport="${target#*@}"
+    [ "$user" != "$target" ] || { echo "orion-ssh: give the login as user@host" >&2; exit 2; }
+    host="${hostport%:*}"; port=22
+    [ "$hostport" != "$host" ] && port="${hostport##*:}"
+    [[ "$port" =~ ^[0-9]{1,5}$ ]] || { echo "orion-ssh: bad port '$port'" >&2; exit 2; }
+    out=$(SSHPASS="$pw" timeout 20 sshpass -e ssh "${ssh_opts[@]}" -p "$port" "$user@$host" 'echo __ok__; uname -snr; uptime' 2>&1)
+    code=$?
+    if ! grep -q __ok__ <<<"$out"; then
+      case "$code" in
+        5) echo "login failed: wrong password for $user@$host" ;;
+        124) echo "login failed: $host did not answer within 20 seconds" ;;
+        *) echo "login failed: $(grep -v __ok__ <<<"$out" | tail -n 2 | tr '\n' ' ')" ;;
+      esac
+      exit 1
+    fi
+    save_vault '.[$a] = {user: $u, host: $h, port: $p, password: $pw}' \
+      --arg a "$alias" --arg u "$user" --arg h "$host" --argjson p "$port" --arg pw "$pw" || exit 1
+    echo "logged in to $user@$host as '$alias':"
+    grep -v __ok__ <<<"$out"
+    ;;
+  run)
+    [ $# -ge 3 ] || { echo "usage: orion-ssh run <alias> <command...>" >&2; exit 2; }
+    alias="$2"; shift 2
+    entry=$(jq -c --arg a "$alias" '.[$a] // empty' "$VAULT")
+    [ -n "$entry" ] || { echo "orion-ssh: no saved login '$alias' (use orion-ssh login first)" >&2; exit 1; }
+    user=$(jq -r .user <<<"$entry"); host=$(jq -r .host <<<"$entry"); port=$(jq -r .port <<<"$entry")
+    SSHPASS="$(jq -r .password <<<"$entry")" timeout 60 sshpass -e ssh "${ssh_opts[@]}" -p "$port" "$user@$host" "$*"
+    code=$?
+    [ $code -eq 124 ] && echo "(stopped after 60 seconds)"
+    exit $code
+    ;;
+  list)
+    jq -r 'to_entries[] | "\(.key)  \(.value.user)@\(.value.host):\(.value.port)"' "$VAULT"
+    ;;
+  forget)
+    [ $# -ge 2 ] || { echo "usage: orion-ssh forget <alias>" >&2; exit 2; }
+    save_vault 'del(.[$a])' --arg a "$2" || exit 1
+    echo "forgot $2"
+    ;;
+  *)
+    echo "usage: orion-ssh login <alias> <user@host[:port]> <password> | run <alias> <command> | list | forget <alias>" >&2
+    exit 2
+    ;;
+esac

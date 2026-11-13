@@ -1,0 +1,26 @@
+# Orion Hub on a Linux server or a Raspberry Pi. Put the key and your time zone in a .env file next to
+# this one (see README.md):
+#   ANTHROPIC_API_KEY=sk-ant-...
+#   TZ=Europe/Berlin
+# then: sudo mkdir -p /DATA/AppData/orion-hub && sudo docker compose up -d && sudo docker logs -f orion-hub
+name: orion-hub
+services:
+  orion-hub:
+    build: .                            # `up -d` pulls the image; `up -d --build` builds it here
+    image: multix00/orion-hub:latest
+    container_name: orion-hub
+    restart: unless-stopped
+    # The hub manages the machine it runs on and talks to the LAN:
+    network_mode: host   # mDNS discovery (_orionhub._tcp) and scans of the real LAN
+    pid: host            # `host <command>` enters the host through PID 1 (nsenter)
+    privileged: true     # required by nsenter
+    env_file: .env
+    environment:
+      ORION_HUB_PORT: "8780"
+      ORION_HUB_NAME: ""          # empty: "Orion Hub on <hostname>"
+      ORION_HUB_MODEL: claude-haiku-5-5
+      ORION_HUB_EFFORT: low
+      TZ: ${TZ:-UTC}              # set TZ in .env to your time zone
+    volumes:
+      - /DATA/AppData/orion-hub:/var/lib/orion-hub    # paired devices, memory, dsh sessions, logs
+      - /var/run/docker.sock:/var/run/docker.sock     # the agent's `docker` commands

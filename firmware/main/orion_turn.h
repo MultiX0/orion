@@ -22,6 +22,14 @@ esp_err_t turn_task_start(void);
 // Starts a voice turn: record the mic, then ASR, LLM, TTS.
 void turn_begin(void);
 
+// A voice turn that follows an answer which asked the user something: the
+// user gets up to 7 s to start, and silence ends it quietly (EV_QUIET).
+void turn_begin_followup(void);
+
+// The last reply asked something, so the board should listen again without
+// the wake word (a brain set "orion_listen", see hub/README.md).
+bool turn_wants_reply(void);
+
 // Starts a text turn on the pending text: LLM and TTS only.
 void turn_begin_text(void);
 

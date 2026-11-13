@@ -43,7 +43,7 @@ You do not need to write code or install developer tools. Three steps:
 
 The installer finds the board, gets Espressif's flashing tool, downloads the latest Orion firmware, checks it against the release's checksum, and writes it. You do not need Python: when it is missing, the installer uses the standalone esptool that Espressif publishes. It takes a few minutes and needs no admin rights. If it cannot find the board, try another cable, or hold the **BOOT** button on the side of the board, tap **RST**, let go of BOOT, and run it again. More in [tools/install](tools/install/README.md).
 
-**3. Open the app.** Get the Orion app for [Android or Windows](https://github.com/MultiX0/orion/releases/latest) (on Windows, run `Orion-1.0.0-windows-x64-setup.exe`; no admin rights needed) and tap *Find my Orion*. The app finds the board over Bluetooth, gives it your Wi-Fi, and asks for two keys:
+**3. Open the app.** Get the Orion app for [Android or Windows](https://github.com/MultiX0/orion/releases/latest) (on Windows, run `Orion-1.1.0-windows-x64-setup.exe`; no admin rights needed) and tap *Find my Orion*. The app finds the board over Bluetooth, gives it your Wi-Fi, and asks for two keys:
 
 - a [Fish Audio](https://fish.audio/?fpr=ipdev) key, for Orion's voice and hearing,
 - a key for the model that does the thinking. [DeepInfra](https://deepinfra.com) is the default; any OpenAI-compatible provider works.
@@ -54,7 +54,7 @@ When the board shows its idle screen, say **"Orion"**.
 
 Orion is a voice assistant that lives on a small board with a screen, a camera, a microphone and a speaker. It listens for its name on the board itself, so nothing leaves your home until you call it. Then it hears your question, thinks, and speaks the answer, in Arabic or English, in its own voice.
 
-It works on its own once it is set up: plug it into any USB charger and it is ready. Leave the Orion app open on your PC or phone and it can do more: open apps, play music, look things up on the web, check how your computer is doing, and remember what you talked about.
+It works on its own once it is set up: plug it into any USB charger and it is ready. Leave the Orion app open on your PC or phone and it can do more: open apps, play music, look things up on the web, check how your computer is doing, and remember what you talked about. Run an Orion Hub on a home server and Orion looks after that too: its Docker containers, your network, and the other machines you log in to.
 
 Things you can say:
 
@@ -63,7 +63,7 @@ Things you can say:
 - "Orion, open Spotify and play something calm."
 - "Orion, how is my PC doing?"
 - "أوريون، احسب ١٢٨ ضرب ٤٦"
-- "أوريون، شو هاد؟"
+- "أوريون، شوف هاد، شو هو؟"
 
 ## Features
 
@@ -71,17 +71,23 @@ Things you can say:
 - A custom wake word, "Orion", trained for Arabic and English speakers and run on the board with TensorFlow Lite Micro.
 - Speech in and out through [Fish Audio](https://fish.audio/?fpr=ipdev), in Orion's own voice. Any OpenAI-compatible speech endpoint can be used instead.
 - Answers stream: Orion starts speaking the first sentence while the rest is still being written.
-- A camera it can look through when you ask what it sees.
-- A 240x240 touch screen with an animated orb for listening, thinking and speaking, a push-to-talk button, and a menu for Wi-Fi setup and factory reset.
+- A camera it looks through only when you ask it to: "take a photo", "look at this", "what do you see".
+- A 240x240 touch screen with an animated orb for listening, thinking and speaking, a push-to-talk button, and a menu for the Orion Hub, Wi-Fi setup and factory reset.
 - Works with any OpenAI-compatible model: DeepInfra, OpenAI, Anthropic, Groq, OpenRouter, Ollama on your own network, or a custom endpoint.
 
 **With the app**
 - Setup over Bluetooth, with each key checked against the real service before it is saved. A board that is already on your Wi-Fi pairs over the network with a six digit code from its screen.
 - Talk or type to Orion, watch its camera live, and read past conversations.
-- **PC control on Windows:** open and close apps, control media, read system stats, take a screenshot and describe it, find files, search the web. Bigger multi-step jobs go to [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), an agent that works in a sandbox folder.
+- **PC control on Windows:** open and close apps, control media, read system stats, take a screenshot and describe it, find files, search the web. Bigger multi-step jobs go to [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), an agent with full control of the PC: it drives the browser and Windows apps, runs commands and downloads files. The Windows setup program brings the Node.js it runs on.
 - Three levels of trust for the PC: off, ask me first, or act on your own. Every action is logged.
 - **Phone as a helper:** with the app open, Orion can open links and apps on your phone.
 - Memory: with the PC app connected, Orion remembers recent turns and what it did, so "pause it" knows what "it" is.
+
+**With an Orion Hub**
+- A voice agent on your own home server, in one Docker Compose service ([hub/](hub/README.md)). The board finds the hub on the network, pairs with it once, and asks it first.
+- Real control of the server: its Docker containers, a scan of your network, other machines over SSH, and notes of what you ask it to remember.
+- When the hub needs something from you, it asks, and the board listens for your answer without the wake word.
+- Every device keeps a permanent id, so the board, the hub and the apps find each other again when an address changes ([docs/ORION_LINK.md](docs/ORION_LINK.md)).
 
 **Privacy**
 - The wake word runs on the board. Audio goes out only after you say "Orion".
@@ -98,7 +104,7 @@ sequenceDiagram
     actor You
     participant Board as Orion board
     participant Fish as Fish Audio
-    participant Brain as Brain (PC app, phone app, or the board)
+    participant Brain as Brain (Orion Hub, PC app, phone app, or the board)
     participant Model as Language model
 
     You->>Board: "Orion"
@@ -107,7 +113,7 @@ sequenceDiagram
     Board->>Fish: recorded speech
     Fish-->>Board: text
     Board->>Brain: the question
-    Brain->>Model: chat request, with tools when a PC or phone is linked
+    Brain->>Model: chat request, with tools when a hub, PC or phone is linked
     Model-->>Brain: answer, streamed
     Brain-->>Board: answer, streamed
     loop each sentence
@@ -117,9 +123,9 @@ sequenceDiagram
     end
 ```
 
-The brain is whichever is available first: the PC app when PC control is on, then a linked phone, then the board itself calling the model directly. The PC and phone add tools, the web, the time and a memory of the conversation; the board alone can still answer anything the model knows and look through its camera.
+The brain is whichever is available first: an Orion Hub when one is paired, then the PC app when PC control is on, then a linked phone, then the board itself calling the model directly. The hub, PC and phone add tools, the web, the time and a memory of the conversation; the board alone can still answer anything the model knows and look through its camera.
 
-More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DEVICE_PROTOCOL.md](docs/DEVICE_PROTOCOL.md) and [docs/HARNESS.md](docs/HARNESS.md).
+More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DEVICE_PROTOCOL.md](docs/DEVICE_PROTOCOL.md), [docs/HARNESS.md](docs/HARNESS.md), [docs/ORION_LINK.md](docs/ORION_LINK.md) and [hub/README.md](hub/README.md).
 
 ## The hardware
 
@@ -194,6 +200,7 @@ Most people never need this; the installer and the app releases cover everything
 |---|---|---|
 | App | Flutter stable | `flutter pub get`, `dart run build_runner build --delete-conflicting-outputs`, `flutter run`. No board yet? `dart run tool/mock_device/main.dart` runs a pretend one. iOS is set up in the same code but has not been built or tried on a device yet, so there is no iOS release. |
 | Firmware | ESP-IDF v5.5.5 | `idf.py build` in `firmware/`. See [docs/FIRMWARE.md](docs/FIRMWARE.md). |
+| Orion Hub | Node 22.19 or newer, Docker | `npm ci && npm run build && npm test` in `hub/`. See [hub/README.md](hub/README.md). |
 | Wake word | Python, WSL2 on Windows | [wakeword/README.md](wakeword/README.md) |
 | Case | Python with build123d, Blender for renders | [case/SPEC.md](case/SPEC.md) |
 
@@ -212,6 +219,7 @@ Orion is written down well enough for an AI assistant (ChatGPT, Claude, Gemini, 
 | `firmware/` | The board's firmware, ESP-IDF 5.5.5 in C, one component per concern | [docs/FIRMWARE.md](docs/FIRMWARE.md) |
 | `lib/`, `test/` | The Flutter app, one folder per feature | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/UI.md](docs/UI.md) |
 | `lib/features/harness/` | The PC and phone brain and the tools it can use on a computer | [docs/HARNESS.md](docs/HARNESS.md) |
+| `hub/` | The Orion Hub, a voice agent for a home server, in Node and TypeScript under Docker | [hub/README.md](hub/README.md) |
 | `tool/` | Dart tools for the app, including a pretend board | |
 | `tools/` | Board scripts and the one-click installer | [tools/install/README.md](tools/install/README.md) |
 | `wakeword/` | Training the "Orion" wake word, and the model that ships | [docs/WAKEWORD.md](docs/WAKEWORD.md) |
@@ -232,6 +240,9 @@ flutter analyze && flutter test
 
 # the firmware, from firmware/ with ESP-IDF 5.5.5
 idf.py build
+
+# the Orion Hub, from hub/ with Node 22.19 or newer
+npm ci && npm run build && npm test
 ```
 
 **Rules to give your assistant**

@@ -1,12 +1,13 @@
 # Cutting a release
 
-Orion has three things that ship: the firmware, the app, and the wake word model (which ships inside the firmware). They are versioned separately.
+Orion has four things that ship: the firmware, the app, the wake word model (which ships inside the firmware) and the Orion Hub. They are versioned separately.
 
 | What | Version lives in | Tag |
 |---|---|---|
 | Firmware | `firmware/version.txt` | `fw-v<version>`, for example `fw-v1.0.0` |
 | App | `version:` in `pubspec.yaml` | `v<version>` |
 | Wake word model | the manifest's `evaluation.source` and the file name | shipped with the firmware |
+| Orion Hub | `hub/package.json`, `VERSION` in `hub/src/server.ts`, the label in `hub/Dockerfile` | the image tag on Docker Hub, `multix00/orion-hub:<version>` |
 
 Every release is under the PolyForm Noncommercial License 1.0.0 in `LICENSE`, with its `Required Notice` line for MultiX0. Anyone who passes Orion on must pass on that file; put it in every release.
 
@@ -53,7 +54,7 @@ The full image blanks the settings partition, so a board flashed with it starts 
 
 ## App
 
-1. **Set the version** in `pubspec.yaml` (`version: <x.y.z>+<build>`). On Windows it becomes the exe's file version; the company (`MultiX0`), product (`Orion`) and description are in `windows/runner/Runner.rc`. Changing those renames the app's Windows data folder, which is why the app carries its old folder across on first start ([APP.md](APP.md#storage)).
+1. **Set the version** in `pubspec.yaml` (`version: <x.y.z>+<build>`) and the same `x.y.z` in `appVersion` in `lib/core/network/link_identity.dart`, which the apps report over Orion Link; a test fails when the two differ. On Windows it becomes the exe's file version; the company (`MultiX0`), product (`Orion`) and description are in `windows/runner/Runner.rc`. Changing those renames the app's Windows data folder, which is why the app carries its old folder across on first start ([APP.md](APP.md#storage)).
 2. **Regenerate and check**:
 
 ```
@@ -75,18 +76,18 @@ flutter build ipa --release            # needs a signing team in Xcode
 
    Build Windows from a short path; a long one fails with MSB3491.
 
-   Then make the Windows builds work on a PC that has never had the Visual C++ Redistributable: copy `msvcp140.dll`, `vcruntime140.dll` and `vcruntime140_1.dll` from Visual Studio's `VC\Redist\MSVC\<ver>\x64\Microsoft.VC145.CRT` into the `Release` folder before zipping it, and build the setup program with [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 or later:
+   Then make the Windows builds work on a PC that has never had the Visual C++ Redistributable or Node.js. Build the setup program with [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 or later:
 
 ```
-ISCC /DAppVersion=<version> /DRedistDir="<that CRT folder>" windows\installer\orion.iss
+powershell -ExecutionPolicy Bypass -File windows\installer\build-installer.ps1 -SkipFlutterBuild
 ```
 
-   It writes `build\installer\Orion-<version>-windows-x64-setup.exe`, which installs Orion for the current user without admin rights, adds it to the Start menu and uninstalls cleanly from Settings. It is not code signed, so SmartScreen shows "Windows protected your PC" until the file builds a reputation; *More info*, then *Run anyway*.
+   It downloads Node.js once and checks it against the checksum pinned in the script, finds `msvcp140.dll`, `vcruntime140.dll` and `vcruntime140_1.dll` in Visual Studio's `VC\Redist\MSVC\<ver>\x64\Microsoft.VC14x.CRT`, and runs `ISCC` on `windows\installer\orion.iss`. It writes `build\installer\Orion-<version>-windows-x64-setup.exe`, which installs Orion for the current user without admin rights, with Node in `{app}\node` for the PC agent (not on the PATH), adds it to the Start menu and uninstalls cleanly from Settings. For the zip, copy the same three DLLs into the `Release` folder and the unpacked Node folder to `Release\node`, so the zip runs the PC agent the same way. It is not code signed, so SmartScreen shows "Windows protected your PC" until the file builds a reputation; *More info*, then *Run anyway*.
 
    The Android build compiles the full path of the generated plugin registrant into `libapp.so`, so an APK built under your home folder carries your user name. Build it from a short path on the same drive, for example a junction (`mklink /J C:\orb <checkout>`); a `subst` drive breaks the Kotlin incremental cache.
 
 5. **Test** against a real board, Bluetooth setup included, on each platform you ship.
-6. **Name and check the builds**: `Orion-<version>-android.apk`, `Orion-<version>-windows-x64-setup.exe`, `Orion-<version>-windows-x64.zip` (the whole `Release` folder, with `LICENSE` and the three runtime DLLs inside), and `SHA256SUMS.txt` over all three, with LF line endings. `aapt2 dump badging` on the APK and the file version of `orion.exe` must both say `<version>`.
+6. **Name and check the builds**: `Orion-<version>-android.apk`, `Orion-<version>-windows-x64-setup.exe`, `Orion-<version>-windows-x64.zip` (the whole `Release` folder, with `LICENSE`, the three runtime DLLs and `node\` inside), and `SHA256SUMS.txt` over all three, with LF line endings. `aapt2 dump badging` on the APK and the file version of `orion.exe` must both say `<version>`.
 7. **Tag** `v<version>` (annotated, `git tag -a v<version> -m "Orion <version>"`) and publish it as in [Publishing on GitHub](#publishing-on-github), with the builds, the `LICENSE` and the notes.
 
 ## Publishing on GitHub
@@ -136,6 +137,21 @@ sha256sum -c orion-firmware-full.bin.sha256
 ```
 
 And the whole Windows path without a board, from an empty folder in `cmd`: download the `.bat` from its raw address and run `flash-orion.bat -DryRun -NoPause -Port COM99`. It must fetch `flash-orion.ps1`, download the firmware, print `Checksum matches the release.` and finish the dry run. On Linux: `bash <(curl -fsSL https://raw.githubusercontent.com/MultiX0/orion/main/tools/install/flash-orion.sh) --dry-run --port /dev/ttyACM0`.
+
+## Orion Hub
+
+1. **Set the version** in `hub/package.json` and the root entry of `hub/package-lock.json`, `VERSION` in `hub/src/server.ts` and the `org.opencontainers.image.version` label in `hub/Dockerfile`.
+2. **Check it** from `hub/`: `npm ci && npm run build && npm test`.
+3. **Build and push** both platforms, then join them under the version and `latest`:
+
+```
+docker buildx build --platform linux/amd64 -t multix00/orion-hub:<version>-amd64 --push hub
+docker buildx build --platform linux/arm64 -t multix00/orion-hub:<version>-arm64 --push hub
+docker buildx imagetools create -t multix00/orion-hub:<version> -t multix00/orion-hub:latest \
+  multix00/orion-hub:<version>-amd64 multix00/orion-hub:<version>-arm64
+```
+
+   On an x86 PC the arm64 image builds under QEMU and takes several minutes. `hub/README.md` points at `latest`, so a board's owner gets the new hub with `docker compose pull && docker compose up -d`.
 
 ## Wake word model
 

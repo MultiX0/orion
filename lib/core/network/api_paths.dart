@@ -12,6 +12,7 @@ abstract final class ApiPaths {
   static const restart = '/api/restart';
   static const provision = '/api/provision';
   static const pair = '/api/pair';
+  static const hub = '/api/hub';
   static const capture = '/capture';
   static const stream = '/stream';
   static const ws = '/ws';

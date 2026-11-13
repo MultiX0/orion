@@ -12,7 +12,13 @@ import os
 import bpy
 from mathutils import Matrix, Vector
 
-ROOT = r"C:\Users\multix\Desktop\Dev\yt-projects\orion"
+# The repository: two folders up from this script, or ORION_ROOT, or the folder Blender was
+# started in when the script is exec'd from Blender's console (start Blender in the repository).
+try:
+    REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+except NameError:
+    REPO = os.environ.get("ORION_ROOT", os.getcwd())
+ROOT = REPO
 sc = bpy.context.scene
 T = math.radians(12.0)
 C_DESK = -26.8

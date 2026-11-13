@@ -80,6 +80,30 @@ bool orion_net_is_up(void)
     return s_up;
 }
 
+// While the speaker plays, Wi-Fi sends at 13 dBm instead of 20: a transmit
+// burst at full power is a few hundred mA, and while the voice streams in
+// the board answers every packet. On a weak USB port, with no battery, those
+// bursts on top of the speaker's peaks pulled the rail down and the amplifier
+// dropped out mid word. Only with a strong signal, where 7 dB less still
+// reaches the router easily.
+#define TX_LOW_QDBM     52      // 13 dBm, in 0.25 dBm steps
+#define TX_FULL_QDBM    80      // 20 dBm
+#define TX_LOW_MIN_RSSI -67
+
+void orion_net_set_quiet_tx(bool quiet)
+{
+    static bool s_quiet;
+    if (quiet == s_quiet) return;
+    if (quiet) {
+        const int rssi = orion_net_rssi();
+        if (!s_up || rssi == 0 || rssi < TX_LOW_MIN_RSSI) return;
+        if (esp_wifi_set_max_tx_power(TX_LOW_QDBM) == ESP_OK) s_quiet = true;
+    } else {
+        esp_wifi_set_max_tx_power(TX_FULL_QDBM);
+        s_quiet = false;
+    }
+}
+
 int orion_net_rssi(void)
 {
     wifi_ap_record_t ap;

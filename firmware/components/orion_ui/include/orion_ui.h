@@ -30,6 +30,22 @@ void ui_set_pc_info(bool found, bool connected, const char *name, const char *ip
 // Menu, PC card refresh button. main re-runs its discovery when it fires.
 void ui_on_pc_refresh(ui_tap_cb_t cb, void *ctx);
 
+// The Orion Hub card in the menu. The order matches orion_hub_state_t.
+typedef enum {
+    UI_HUB_NONE = 0,
+    UI_HUB_SCANNING,
+    UI_HUB_FOUND,
+    UI_HUB_PAIRING,
+    UI_HUB_WAITING,     // code: the 4 digits the hub's owner approves
+    UI_HUB_CONNECTED,
+    UI_HUB_OFFLINE,
+    UI_HUB_FAILED,
+} ui_hub_t;
+void ui_set_hub_info(ui_hub_t state, const char *name, const char *ip, const char *code);
+// The card's button: search, connect, or (tapped twice) forget the hub. The
+// callback decides which from the state it set.
+void ui_on_hub_action(ui_tap_cb_t cb, void *ctx);
+
 // Menu, camera card. main wires orion_camera in so orion_ui needs no
 // dependency on it. get returns a JPEG in PSRAM, release frees that frame.
 typedef esp_err_t (*ui_jpeg_get_t)(uint8_t **jpeg, size_t *len);

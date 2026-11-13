@@ -22,7 +22,7 @@ static const char *TAG = "vad";
 #define NO_SPEECH_MS     4000
 #define PREROLL_MS       300
 #define TAIL_MS          400
-#define MAX_UTTERANCE_MS 10000
+#define MAX_UTTERANCE_MS 16000   // a follow-up asks 15 s: up to 7 s to start, then the answer
 #define START_MIN        100
 #define END_MIN          50
 // The speaker's own sound and the room's tail after it: never the start of speech.
@@ -33,6 +33,12 @@ static const char *TAG = "vad";
 
 static volatile bool s_marked;
 static volatile uint32_t s_mark;
+static volatile uint32_t s_no_speech_once;
+
+void orion_audio_set_no_speech_ms(uint32_t ms)
+{
+    s_no_speech_once = ms;
+}
 
 void orion_audio_mark_utterance(void)
 {
@@ -87,6 +93,10 @@ esp_err_t orion_audio_record_utterance_stream(int16_t **pcm, size_t *samples, ui
     if (max_ms == 0 || max_ms > MAX_UTTERANCE_MS) {
         max_ms = MAX_UTTERANCE_MS;
     }
+    // A follow-up waits longer for the user to start: they were just asked something.
+    // Read once even if the buffer cannot be had, so it never carries over.
+    const uint32_t no_speech_ms = s_no_speech_once ? s_no_speech_once : NO_SPEECH_MS;
+    s_no_speech_once = 0;
     size_t cap = MS_TO_SAMPLES(max_ms);
     int16_t *buf = heap_caps_malloc(cap * sizeof(int16_t), MALLOC_CAP_SPIRAM);
     ESP_RETURN_ON_FALSE(buf, ESP_ERR_NO_MEM, TAG, "buffer");
@@ -145,7 +155,7 @@ esp_err_t orion_audio_record_utterance_stream(int16_t **pcm, size_t *samples, ui
                 speech_start = len - START_FRAMES * FRAME;
                 from = keep_from(speech_start, echo_end);
                 sent = from;
-            } else if (elapsed_ms >= NO_SPEECH_MS) {
+            } else if (elapsed_ms >= no_speech_ms) {
                 result = ESP_ERR_NOT_FOUND;
                 break;
             }

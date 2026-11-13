@@ -1,7 +1,8 @@
 import 'dart:io';
 
-/// Where the harness keeps its own things. Nothing here is ever the user's
-/// home directory: dsh gets `~/Orion/agent` and no more, per docs/HARNESS.md.
+/// Where the harness keeps its own things: dsh's home is `~/Orion/agent/.dsh`,
+/// never the user's own `~/.dsh`. With desktop control the agent works in the
+/// user's home (docs/HARNESS.md, "The PC agent").
 class DshPaths {
   const DshPaths(this.root);
 
@@ -19,9 +20,24 @@ class DshPaths {
   /// Our own DSH_HOME, so we never write into the user's `~/.dsh`.
   String get dshHome => _join(sandbox, '.dsh');
 
-  String get settingsFile => _join(dshHome, 'settings.yaml');
-
   String get envFile => _join(dshHome, '.env');
+
+  /// A dsh profile's folder: its patch layer and its installed plugins.
+  String profileDir(String profile) =>
+      _join(_join(dshHome, 'profiles'), profile);
+
+  String profilePatch(String profile) =>
+      _join(profileDir(profile), 'cordis.patch.yml');
+
+  /// Where the agent works with desktop control: the user's own home, since
+  /// it downloads and opens their files. USERPROFILE on Windows.
+  static String downloads({Map<String, String>? environment}) =>
+      _join(userHome(environment: environment), 'Downloads');
+
+  static String userHome({Map<String, String>? environment}) {
+    final env = environment ?? Platform.environment;
+    return env['USERPROFILE'] ?? env['HOME'] ?? Directory.current.path;
+  }
 
   String get logsDir => _join(root, 'logs');
 

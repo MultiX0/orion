@@ -98,8 +98,8 @@ abstract final class VoicePresets {
     name: 'Fish Audio',
     provider: StageProvider.fish,
     keyId: fishKeyId,
-    model: 's2.1-pro-free',
-    models: ['s2.1-pro-free', 's2.1-pro', 's2-pro', 's1'],
+    model: 'drama-3',
+    models: ['drama-3', 's2.1-pro', 's2.1-pro-free', 's2-pro', 's1'],
     voice: orionVoiceId,
   );
 

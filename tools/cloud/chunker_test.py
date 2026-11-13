@@ -47,6 +47,10 @@ CASES = [
     ("It will be sunny tomorrow in Irbid.<turn|>",
      ["It will be sunny tomorrow in Irbid."]),
 
+    # So is a marker it makes up between pipes.
+    ("|speaking| Sure, I can help with that.",
+     ["Sure, I can help with that."]),
+
     # A laugh is a sound, not a mood: it is not carried across a comma cut.
     ("[chuckling] That is a classic excuse, but I believe you, and I think so too.",
      ["[chuckling] That is a classic excuse,", "but I believe you, and I think so too."]),

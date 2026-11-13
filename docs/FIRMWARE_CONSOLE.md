@@ -42,7 +42,10 @@ Things to know:
 
 | Command | Does |
 |---|---|
-| `power` | SY6970: VBUS, VBAT, VSYS, charge current and state |
+| `power` | SY6970: VBUS, VBAT, VSYS, charge current and state, and the USB input limit |
+| `power watch [s]` | for s seconds (20 by default), how often the charger held its input back: at its current limit (IDPM) or with the source sagging (VDPM) |
+| `power ilim <mA>` | the USB input limit by hand, 500 to 3250 mA, to stand in for a weak port. It stays until `power ilim auto` or a restart |
+| `power ilim auto` | the board's own input limit again: 1500 mA, put back every minute after a replug resets it |
 | `audio_en <0\|1>` | the mic and amp enable line |
 | `bl <0\|1>` | the backlight |
 
@@ -63,6 +66,8 @@ Things to know:
 | `spk boost on\|off` | the loudness chain (off by default) |
 | `spk gain <db>`, `spk presence <db>`, `spk treble <db>`, `spk hpf <hz>`, `spk mud <db>` | tune the chain live |
 | `spk slots left\|both` | fill one or both I2S slots (both is right for this board) |
+| `spk supply on\|off` | the voice follows the supply (on by default): 1.5 dB down each time the charger holds its input back, at most 15 dB, and back up 0.5 dB a second after 4 s without one. Off still counts the times, for comparing |
+| `spk prio <n>` | the speaker writer's task priority while a stream plays (7 by default, 0 leaves it alone) |
 
 ### Wake word
 
@@ -127,6 +132,15 @@ cloud_test stt
 | `prov stop` | leave setup mode |
 | `prov token <token>` | store an app token (8 to 64 characters) as a paired app |
 
+### Orion Hub
+
+| Command | Does |
+|---|---|
+| `hub [status]` | the hub state, the paired hub's name, address and id, the approval code while it waits, and every hub found |
+| `hub scan` | look for hubs on the network now (mDNS) |
+| `hub connect [url]` | pair with the first hub found, or with the one at `url`, for example `hub connect http://192.168.1.20:8780` |
+| `hub forget` | drop the paired hub and tell it so; turns go to the next brain |
+
 ### Screen
 
 | Command | Does |
@@ -153,6 +167,7 @@ cloud_test stt
 | `turn: heard: ...`, `turn: reply: ...` | the transcript and the answer |
 | `turn=<n> asr_ms=... total_ms=... heap_int=...` | one line per turn |
 | `turn_perf speech_end_to_audio_ms=...` | the full timing breakdown |
+| `spk: played ... supply held back <n> times, voice <db> dB` | one line per answer; a voice below 0 dB was turned down for a weak USB supply (`spk supply`) |
 | `cloud_pc: pc brain at ... online` | the PC brain answered its check |
 | `orion_api: links: pc on, phone off` | which apps are linked |
 | `orion_net: '<ssid>' is not in the 2.4 GHz scan` | the network is 5 GHz only or out of range |

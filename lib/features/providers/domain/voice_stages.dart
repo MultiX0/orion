@@ -23,7 +23,7 @@ abstract class StageChoice with _$StageChoice {
 }
 
 /// Speech to text and text to speech, chosen separately. Defaults are the
-/// board's: Fish transcribe-1 and Fish s2.1-pro-free.
+/// board's: Fish transcribe-1 and Fish Drama 3 with the Orion Voice.
 @freezed
 abstract class VoiceStages with _$VoiceStages {
   const VoiceStages._();

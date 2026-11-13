@@ -11,6 +11,7 @@ board-frame location so each one can be traced to a feature.
 Writes case/blender/print_report.txt.
 """
 import math
+import os
 import sys
 
 import bmesh
@@ -162,7 +163,11 @@ def run():
                 lines.append(f"   thin cluster {len(ps):4d} faces  board x {lo.x:6.1f}..{hi.x:6.1f} "
                              f"y {lo.y:6.1f}..{hi.y:6.1f} z {lo.z:6.1f}..{hi.z:6.1f}")
     text = "\n".join(lines)
-    open(r"C:\Users\multix\Desktop\Dev\yt-projects\orion\case\blender\print_report.txt", "w").write(text + "\n")
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        here = os.path.join(os.environ.get("ORION_ROOT", os.getcwd()), "case", "blender")
+    open(os.path.join(here, "print_report.txt"), "w").write(text + "\n")
     print(text)
 
 

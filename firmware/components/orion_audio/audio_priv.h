@@ -50,6 +50,12 @@ typedef enum { AUDIO_DSP_RAW, AUDIO_DSP_CLEAN, AUDIO_DSP_BOOST } audio_dsp_mode_
 void audio_dsp_set_mode(audio_dsp_mode_t mode);
 audio_dsp_mode_t audio_dsp_mode(void);
 void audio_spk_set_silent(bool on);
+void audio_dsp_set_supply_db(float db);
+void audio_spk_set_supply_watch(bool on);
+bool audio_spk_supply_watch(void);
+float audio_spk_supply_db(void);
+void audio_spk_set_writer_prio(unsigned prio);
+unsigned audio_spk_writer_prio(void);
 bool audio_spk_silent(void);
 esp_err_t audio_spk_set_capture(bool on);
 void audio_spk_dump(void);

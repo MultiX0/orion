@@ -97,6 +97,7 @@ Frame rates on the full firmware, measured with `ui perf`:
 
 | Card | Rows | Button |
 |---|---|---|
+| `// HUB` الخادم | state (ما في خادم none, عم دوّر... scanning, لقيت خادم found, عم يتصل... pairing, وافق: with the 4 digit code while the hub's owner approves, متصل connected in the accent, مش متصل offline, ما زبط failed), name, IP | ابحث search, اتصل connect, انتظر while pairing (does nothing), افصل forget: "متأكد؟" (sure?) for 4 s, a second tap forgets |
 | `// PC` الكمبيوتر | state (ما في جهاز none, موجود found, متصل connected in the accent), name, IP | تحديث: check the PC brain now |
 | `// NET` الشبكة | signal as bars and dBm (or مافي إنترنت), SSID, IP | إعداد الواي فاي: restart into Bluetooth setup mode |
 | `// CAM` الكاميرا | a live preview | |

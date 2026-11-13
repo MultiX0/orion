@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:intl/intl.dart';
 
 import '../../providers/data/provider_headers.dart';
+import '../../providers/data/request_fields.dart';
 import '../../providers/domain/llm_provider.dart';
 import '../domain/harness_call.dart';
 import '../domain/harness_call_status.dart';
@@ -607,32 +608,44 @@ class PcBrain {
   }
 
   Future<HttpClientResponse> _request(_Turn t, {bool tools = true}) async {
-    final req = await _client
-        .postUrl(Uri.parse('${t.provider.baseUrl}/chat/completions'))
-        .timeout(const Duration(seconds: 10));
-    headersFor(t.provider).forEach(req.headers.set);
-    req.headers.contentType = ContentType.json;
-    req.add(
-      utf8.encode(
-        jsonEncode(<String, dynamic>{
-          'model': t.model,
-          'stream': true,
-          // A thinking model spends its reasoning out of this too.
-          'max_tokens': t.thinking ? 4000 : 600,
-          'temperature': t.temperature,
-          'messages': t.messages,
-          if (tools) 'tools': t.tools,
-          if (tools) 'tool_choice': 'auto',
-          if (t.thinking) 'reasoning_effort': ?reasoningEffort,
-        }),
-      ),
-    );
-    final resp = await req.close().timeout(const Duration(seconds: 30));
-    if (resp.statusCode != 200) {
+    // A provider can refuse temperature, then max_tokens: learned from its
+    // 400 (RequestFields), and the same request goes again.
+    for (var attempt = 0; ; attempt++) {
+      final req = await _client
+          .postUrl(Uri.parse('${t.provider.baseUrl}/chat/completions'))
+          .timeout(const Duration(seconds: 10));
+      headersFor(t.provider).forEach(req.headers.set);
+      req.headers.contentType = ContentType.json;
+      req.add(
+        utf8.encode(
+          jsonEncode(<String, dynamic>{
+            'model': t.model,
+            'stream': true,
+            // A thinking model spends its reasoning out of this too.
+            ...RequestFields.of(
+              t.provider,
+              t.model,
+              maxTokens: t.thinking ? 4000 : 600,
+              temperature: t.temperature,
+              thinking: t.thinking,
+            ),
+            'messages': t.messages,
+            if (tools) 'tools': t.tools,
+            if (tools) 'tool_choice': 'auto',
+            if (t.thinking) 'reasoning_effort': ?reasoningEffort,
+          }),
+        ),
+      );
+      final resp = await req.close().timeout(const Duration(seconds: 30));
+      if (resp.statusCode == 200) return resp;
       final text = await resp.transform(utf8.decoder).join();
+      if (resp.statusCode == 400 &&
+          attempt < 2 &&
+          RequestFields.learn(t.provider, t.model, text)) {
+        continue;
+      }
       throw HttpException('model http ${resp.statusCode}: $text');
     }
-    return resp;
   }
 
   Stream<Map<String, dynamic>> _deltas(HttpClientResponse resp) async* {

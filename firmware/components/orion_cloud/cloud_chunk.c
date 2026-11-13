@@ -242,10 +242,32 @@ static void drop_foreign(char *s)
     *w = '\0';
 }
 
+// Also a marker a model makes up between pipes, |speaking| or |pause|: the
+// voice would read it out. Speech never has a pipe.
+static bool pipe_marker(const char *r, size_t *len)
+{
+    if (*r != '|') return false;
+    size_t k = 1;
+    while (k <= 24 && (isalpha((unsigned char) r[k]) || r[k] == '_' || r[k] == '-' || r[k] == ' ')) {
+        k++;
+    }
+    if (k > 1 && r[k] == '|') {
+        *len = k + 1;
+        return true;
+    }
+    return false;
+}
+
 static void drop_model_tokens(char *s)
 {
     char *w = s;
     for (const char *r = s; *r;) {
+        size_t plen;
+        if (pipe_marker(r, &plen)) {
+            r += plen;
+            while (*r == ' ') r++;
+            continue;
+        }
         if (*r == '<') {
             size_t k = 1;
             while (k <= 24 && (isalpha((unsigned char) r[k]) || r[k] == '_' ||

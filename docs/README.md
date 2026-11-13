@@ -19,6 +19,7 @@ By MultiX0 (https://github.com/MultiX0), under the PolyForm Noncommercial Licens
 | [ARCHITECTURE.md](ARCHITECTURE.md) | The whole system, a voice turn step by step, where answers are written, the board's states, where secrets live, why internal RAM shapes everything |
 | [DEVICE_PROTOCOL.md](DEVICE_PROTOCOL.md) | The board's API: discovery, Bluetooth setup, pairing, REST, the WebSocket, the brain interface, the mock board |
 | [HARNESS.md](HARNESS.md) | PC control and the extended brain: the PC and phone brains, tools, approvals, memory, and how the models were chosen |
+| [ORION_LINK.md](ORION_LINK.md) | How boards, hubs and the apps know each other by permanent ids and find each other again when an address changes |
 | [PROVIDERS.md](PROVIDERS.md) | The language model, speech to text and text to speech: presets, defaults, keys, Fish Audio credit |
 | [VOICE.md](VOICE.md) | Orion Voice on Fish Audio, languages and register, emotion tags, the system prompt and how to change it, earcons |
 | [WAKEWORD.md](WAKEWORD.md) | The "Orion" wake word: the model, its data and training, what the runs taught, the board runtime, retraining |

@@ -24,6 +24,8 @@ Every board takes its names from the last two bytes of its Wi-Fi station MAC add
 - Device id, used everywhere on the LAN: `orion-a1b2`
 - Display name: `Orion` until changed through `device_name`
 
+Every board, hub and app also has an Orion Link id and answers `GET /.well-known/orion`; see [ORION_LINK.md](ORION_LINK.md) for how the devices find each other again when an address changes.
+
 ## Discovery
 
 The app runs four searches at once and merges them into one list, deduplicated by `device_id`. Every hit is confirmed with a real `GET /api/info` (400 ms timeout, up to 64 at once) before it is shown, and the source is shown as a small tag.
@@ -43,14 +45,14 @@ mDNS is filtered by many routers and by Windows itself, which is why the beacon 
 - Host name `orion` (so `orion.local`)
 - Instance name: the device name
 - Service `_orion._tcp`, port 80
-- TXT: `id=<device_id>`, `name=<device name>`, `fw=<firmware version>`
+- TXT: `id=<device_id>`, `name=<device name>`, `fw=<firmware version>`, `kind=board`
 
 ### Beacon
 
 While the board is on the network it broadcasts this every 2 seconds to `255.255.255.255:7332`:
 
 ```json
-{ "orion": 1, "device_id": "orion-a1b2", "name": "Orion", "fw": "1.0.0", "ip": "192.168.1.40", "port": 80 }
+{ "orion": 1, "id": "orion-a1b2", "device_id": "orion-a1b2", "kind": "board", "name": "Orion", "fw": "1.1.0", "ip": "192.168.1.40", "port": 80 }
 ```
 
 ## Tokens and auth
@@ -257,7 +259,7 @@ The whole config with secrets masked: an `api_key` or `pc.token` reads `"...4f2a
     "provider": "fish",
     "base_url": null,
     "api_key": "...9c1d",
-    "model": "s2.1-pro-free",
+    "model": "drama-3",
     "voice": "9a68c1d739134940a4297c996c5ca6a1"
   },
   "pc": {
@@ -320,7 +322,7 @@ The defaults, which a new board and a factory reset both start from:
 |---|---|
 | Language model | DeepInfra, `https://api.deepinfra.com/v1/openai`, `google/gemma-4-31B-it-turbo` |
 | Speech to text | Fish Audio `transcribe-1` |
-| Text to speech | Fish Audio `s2.1-pro-free`, Orion Voice `9a68c1d739134940a4297c996c5ca6a1` |
+| Text to speech | Fish Audio `drama-3`, Orion Voice `9a68c1d739134940a4297c996c5ca6a1` |
 | PC | off, approval `ask` |
 
 When `stt` and `tts` are both on Fish, one Fish key serves both. The app sends the same key in both blocks.
@@ -445,7 +447,9 @@ ws://<board>/ws?token=<app token>&client=pc|phone&brain=<host>:<port>
 
 `client=pc` or `client=phone` makes the socket a link. The board shows a dot for each app on its idle screen, lit while the link holds, and dims it the moment the socket closes or after 15 s without a frame. The apps ping every 5 s. Up to four links are tracked.
 
-`brain=<host>:<port>`, from a phone only, offers the phone's own brain: the same OpenAI style endpoint as the PC's. The board then calls it with `Authorization: Bearer <that phone's app token>` while the link lasts. See "Board to brain".
+`brain=<host>:<port>`, from a phone only, offers the phone's own brain: the same OpenAI style endpoint as the PC's. The board then calls it with `Authorization: Bearer <that phone's app token>` while the link lasts, at the address the link comes from and the port offered. See "Board to brain".
+
+A `client=pc` link made with the token the board holds as `pc.token` from another address than `pc.base_url` moves `pc.base_url` to that address, same port ([ORION_LINK.md](ORION_LINK.md), "Learning from connections").
 
 A PC that links is checked straight away (its health check runs at once), so it answers the very next turn.
 
@@ -475,9 +479,9 @@ The app also understands `turn.tool` and `log` events, which the mock board send
 
 ## Board to brain
 
-With PC control on, or a phone linked with a `brain`, the board sends each turn to an extended brain instead of straight to its own model. The brain is the Orion app's tool server; see [HARNESS.md](HARNESS.md) for what it does with the turn.
+With an Orion Hub paired, PC control on, or a phone linked with a `brain`, the board sends each turn to an extended brain instead of straight to its own model. The PC and phone brains are the Orion app's tool server; see [HARNESS.md](HARNESS.md) for what it does with the turn. The Orion Hub is a home server agent; see [hub/README.md](../hub/README.md).
 
-Order for every turn: the PC (when `pc.enabled` and its last check passed), then a linked phone, then the board's own model. A brain that fails before a word has been spoken hands the same turn to the next one, and is marked down until its next check passes.
+Order for every turn: the Orion Hub (when paired and its last check passed), then the PC (when `pc.enabled` and its last check passed), then a linked phone, then the board's own model. A brain that fails before a word has been spoken hands the same turn to the next one, and is marked down until its next check passes.
 
 ### Health check
 
@@ -501,7 +505,7 @@ Content-Type: application/json
   "messages": [ system, ...history, user ], "tools": [ look ] }
 ```
 
-The same request the board would send its own model: the system prompt with the local date and time, the last few turns, the question, and the board's own `look` tool (its camera). The brain answers with OpenAI SSE, `data: {"choices":[{"delta":{"content":"..."}}]}` lines and `data: [DONE]`. If the brain wants the camera it streams a `look` tool call, the board takes a picture and sends a second request with the image.
+The same request the board would send its own model: the system prompt with the local date and time, the last few turns, and the question, with a picture from the board's camera when the question asked for it in so many words. No tools are offered. The brain answers with OpenAI SSE, `data: {"choices":[{"delta":{"content":"..."}}]}` lines and `data: [DONE]`.
 
 A brain that cannot answer at all (no model set up on that PC, a bad key, no internet) must answer before streaming, with a non-200 status such as 503. The board then answers with its own model.
 
@@ -512,6 +516,37 @@ Rules a brain's stream has to keep, each learned from a failure on the board:
 - **Show life every few seconds.** Any bytes read count as progress: the board's 30 s turn deadline counts from the last read, not from the wake word. A brain working through a task sends a keep-alive at least every 3 s.
 - **Fillers of 15 letters or more.** The board's sentence chunker holds a first piece shorter than 15 speakable characters until more text arrives. "One moment, I'm on it." and "لحظة من فضلك، أعمل على ذلك." are long enough; "One moment." waited 30 s.
 - **No control tokens.** Model control tokens such as `<turn|>` and `<|im_end|>` must not reach the voice. The PC brain drops them, and the board's chunker drops them again.
+
+Two more things a brain can do, used by the Orion Hub:
+
+- **Ask for the reply without the wake word.** An event with `"orion_listen": true` before `[DONE]` (`data: {"choices":[{"index":0,"delta":{},"finish_reason":null}],"orion_listen":true}`) says the answer asked the user something. When the answer has been spoken the board plays the wake chime and listens at once, up to 7 s for the user to start and 15 s in all. Silence ends it quietly, with no error sound. At most four follow-ups run in a row before the wake word is needed again.
+- **Speak whole bursts (hub only).** From the hub the board does not cut text at commas and full stops, which gave every piece its own intonation and a silence at each join. It holds the text and sends it to text to speech in one request when the stream goes quiet: the `: working` keep-alive the hub writes right after each burst, or the end. An answer over 900 bytes still goes by sentences.
+
+Playing the reply also counts as progress, so a long spoken answer does not run into the 30 s deadline.
+
+### Orion Hub pairing
+
+The board finds hubs by mDNS (`_orionhub._tcp`) a few seconds after boot and every two minutes, or when asked. A search that was asked for and finds nothing by mDNS also sweeps the board's /24 for port 8780 and lists every hub that answers there (a hub under Docker Desktop cannot announce itself). Pairing follows the hub's own flow: `GET /api/v1/info` (must say `"kind": "orion-hub"`), then `POST /api/v1/pair/request {name, kind: "board", hw: "<device id>"}`. The first device a hub sees becomes its owner at once; any later one shows a four digit code on its screen and polls every 2 s for up to five minutes while the owner approves it (`orion-hub-cli approve <code>` on the hub). The token, address, name, device id and the hub's Orion Link id go to NVS as `hub_token`, `hub_url`, `hub_name`, `hub_dev`, `hub_id`. A paired hub that moved to a new address is found again by its id: mDNS TXT `id` first, then a sweep of the board's /24 on the hub's port, less often the longer the hub stays away ([ORION_LINK.md](ORION_LINK.md)). `hw` lets the hub replace this board's old entry when it pairs again.
+
+The app drives it through the board:
+
+```
+GET  /api/hub
+200 { "state": "none|scanning|found|pairing|waiting|connected|offline|failed", "paired": true,
+      "name": "Orion Hub", "url": "http://192.168.1.5:8780", "id": "hub-3c9e51a07b2d", "code": "4821", "message": "...",
+      "found": [ { "name": "Orion Hub", "url": "http://192.168.1.5:8780" } ] }
+
+POST /api/hub { "action": "scan" }
+POST /api/hub { "action": "connect", "url": "http://192.168.1.5:8780" }   url optional: the first hub found
+POST /api/hub { "action": "forget" }                                       also removes the board on the hub
+200 { "ok": true }
+400 { "error": "bad_request", "message": "action must be scan, connect (with an optional url) or forget" }
+409 { "error": "busy", "message": "the hub client is busy, try again" }
+```
+
+`id` is there once the board knows the paired hub's id. A `connect` on a board that is already paired is refused with the message `forget the paired hub first`, and the paired hub stays.
+
+The console has the same as `hub [scan | connect [url] | forget | status]`, and the menu's first card shows the hub with a search, connect or disconnect button.
 
 ### The PC tool interface
 

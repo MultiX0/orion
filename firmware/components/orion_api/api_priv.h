@@ -38,6 +38,7 @@ esp_err_t api_post_token(const char *token);
 
 // Talk, say, stop and the history, api_talk.c
 void api_talk_register(httpd_handle_t hd);
+void api_hub_register(httpd_handle_t hd);
 void api_history_turn_start(uint32_t turn, const char *source);
 void api_history_text(uint32_t turn, bool user, const char *text);
 void api_history_turn_end(uint32_t turn, uint32_t total_ms);

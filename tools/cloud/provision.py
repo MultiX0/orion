@@ -113,7 +113,7 @@ def collect():
     put("stt_model", model)
 
     tts_prov = "fish" if env("TTS_PROVIDER", default="fish") == "fish" else "openai_compatible"
-    p, url, key, model, voice = stage("TTS", tts_prov, "s2.1-pro-free", "Qwen/Qwen3-TTS",
+    p, url, key, model, voice = stage("TTS", tts_prov, "drama-3", "Qwen/Qwen3-TTS",
                                       fish_voice=True)
     if not key:
         missing.append("TTS_API_KEY or " + ("FISH_API_KEY" if p == "fish" else "DEEPINFRA_API_KEY"))

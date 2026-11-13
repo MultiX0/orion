@@ -39,12 +39,33 @@ typedef struct {
     // The PC brain (docs/HARNESS.md): the desktop app's OpenAI style endpoint.
     // url is empty unless pc.enabled with an address and a token.
     cloud_stage_cfg_t pc;
+    // Orion Hub (hub/README.md): a home server brain, paired from the board's
+    // menu or the app. url is empty unless the board holds a hub address and token.
+    cloud_stage_cfg_t hub;
+    char hub_name[48];
+    // What the language model's server accepts. Set from the provider the app
+    // chose, and learned from a 400 for one it does not know (cloud_reply.c).
+    // Anthropic refuses "temperature" on its newer models; OpenAI's newer ones
+    // refuse it too, and want "max_completion_tokens" for "max_tokens".
+    bool llm_no_temp;
+    bool llm_mct;
+    // Claude thinks by default, out of the same token limit: a short spoken
+    // answer could end before its first word. Anthropic gets thinking off,
+    // the way the model takes it: "disabled", "between_tools" (Sonnet 5.5
+    // says so in its 400), or, for a model that cannot stop (Opus 5.5),
+    // nothing sent and room in the limit to think.
+    uint8_t llm_think;
     uint32_t tts_rate;          // 32000 from Fish by default, 24000 from an OpenAI style server
     char vision_mode[12];
 } cloud_cfg_t;
 
 esp_err_t cloud_cfg_load(void);
 const cloud_cfg_t *cloud_cfg(void);
+// The server said no to a request field: leave it out, or use the new name.
+void cloud_cfg_llm_learned(bool no_temp, bool mct);
+enum { LLM_THINK_ASIS = 0, LLM_THINK_DISABLED, LLM_THINK_BETWEEN_TOOLS, LLM_THINK_ROOM };
+// The model refused how thinking was turned off: the next way, from its message.
+void cloud_cfg_llm_thinks(const char *msg);
 // Console only: the rate asked of Fish TTS, 16000, 24000, 32000 or 44100.
 void cloud_cfg_set_fish_rate(uint32_t hz);
 
@@ -56,6 +77,7 @@ typedef enum {
     CLOUD_SLOT_TTS,
     CLOUD_SLOT_PC,          // plain HTTP on the LAN, only in PC mode
     CLOUD_SLOT_PHONE,       // plain HTTP on the LAN, while a phone is linked
+    CLOUD_SLOT_HUB,         // plain HTTP on the LAN, while paired with an Orion Hub
     CLOUD_SLOT_COUNT,
 } cloud_slot_t;
 
@@ -130,8 +152,9 @@ void cloud_net_bind(void);
 bool cloud_net_shared(cloud_slot_t stage);
 void cloud_net_set_timeout(cloud_slot_t stage, int ms);
 
-// The extended brains, cloud_pc.c: the PC (checked on every prewarm) and the
-// phone (while linked). slot is CLOUD_SLOT_PC or CLOUD_SLOT_PHONE. LLM worker.
+// The extended brains, cloud_pc.c: an Orion Hub and the PC (both checked on
+// every prewarm, an offline hub at most every 30 s) and the phone (while
+// linked). slot is CLOUD_SLOT_HUB, CLOUD_SLOT_PC or CLOUD_SLOT_PHONE. LLM worker.
 void cloud_pc_check(void);
 bool cloud_brain_ready(cloud_slot_t slot);
 void cloud_brain_failed(cloud_slot_t slot);
@@ -154,6 +177,7 @@ void cloud_cut_fish_section(const char *base, bool fish, char *out);
 
 // The <fish> cut for both providers, run by cloud_selftest.
 int prompt_selftest(void);
+int screen_selftest(void);
 
 // cfg_set, cfg_copy, cfg_del on the console, see cloud_cfg_cmds.c.
 void cloud_cfg_register_cmds(void);
@@ -165,6 +189,7 @@ typedef struct {
     size_t reply_len;
     bool speak;             // hand pieces to the TTS worker
     bool used_camera;
+    bool listen;            // the brain asked something: listen again without the wake word
     int pieces;
     uint32_t llm_first_ms;  // chat request to its first token
     uint32_t llm_ms;        // chat request to its last token
@@ -220,3 +245,7 @@ void cloud_wav_header(uint8_t hdr[44], size_t pcm_bytes, uint32_t rate);
 uint32_t cloud_now_ms(void);
 void *cloud_psram_alloc(size_t bytes);
 char *cloud_psram_strdup(const char *s);
+
+// The turn is alive (reading the reply, or playing it): the deadline restarts.
+// At most every 2 s.
+void cloud_progress(void);

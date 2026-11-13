@@ -1,0 +1,25 @@
+{
+  "name": "orion-hub",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Orion Hub: the home server brain for the Orion voice assistant, an agent on DeepSeek Harness.",
+  "type": "module",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "start": "node dist/src/main.js",
+    "test": "node --test dist/test/*.test.js"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-sdk-client": "0.2.2-rc.1",
+    "bonjour-service": "1.4.4"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3"
+  }
+}

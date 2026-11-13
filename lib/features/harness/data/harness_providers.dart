@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/network/link_identity.dart';
 import '../../../core/network/local_address.dart';
 import '../../../core/platform/platform_info.dart';
 import '../../../core/storage/secret_store.dart';
@@ -44,7 +45,13 @@ AgentRuntime agentRuntime(Ref ref) {
   if (!ref.watch(platformInfoProvider).canHostHarness) {
     return const NullRuntime();
   }
-  return DshRuntime(paths: ref.watch(dshPathsProvider), probe: DshProbe());
+  // The PC agent has the whole desktop: screen, mouse and keyboard
+  // (docs/HARNESS.md, "The PC agent").
+  return DshRuntime(
+    paths: ref.watch(dshPathsProvider),
+    probe: DshProbe(),
+    desktop: true,
+  );
 }
 
 /// The real harness on desktop, a polite no on a phone, the fake in tests.
@@ -100,6 +107,7 @@ HarnessRepository harnessRepository(Ref ref) {
     memory: PcMemory(),
     desktopState: control?.openWindows,
     // One Windows consent prompt the first time PC control goes on.
+    identity: linkIdentityFor(ref),
     allowInbound: Platform.isWindows
         ? (port) async =>
               await WindowsFirewall.isAllowed(port) ||
@@ -123,7 +131,7 @@ Future<void> _boot(Ref ref, DesktopHarnessRepository repo) async {
   repo.pairingToken = await secrets.read(SecretKeys.pairingToken);
   repo.seedApprovalMode(settings.approvalMode);
   // The server before the version probe: the board can send a turn at any
-  // moment, and asking dsh and Node for their versions takes seconds.
+  // moment, and asking dsh and Node for their versions can take minutes.
   if (settings.harnessEnabled) {
     // A server that could not start now (the port still closing, the network
     // not up yet) tries again, so PC control never stays off by itself.
@@ -132,14 +140,20 @@ Future<void> _boot(Ref ref, DesktopHarnessRepository repo) async {
       await Future<void>.delayed(const Duration(seconds: 5));
     }
   }
+  // The board's mode first: a turn can arrive as soon as the server is up,
+  // and the dsh probe can take minutes.
+  if (!ref.mounted) return;
+  await repo.loadApprovalFromBoard();
+  if (!ref.mounted) return;
   final selected = config.providers
       .where((p) => p.id == config.selectedId)
       .firstOrNull;
-  await repo.refreshStatus(
-    providerName: selected?.name,
-    model: selected?.selectedModel,
+  unawaited(
+    repo.refreshStatus(
+      providerName: selected?.name,
+      model: selected?.selectedModel,
+    ),
   );
-  await repo.loadApprovalFromBoard();
 }
 
 /// The phone lends the board its brain while the app runs and holds its link:
@@ -158,6 +172,7 @@ Future<String?> phoneBrain(Ref ref) async {
       .read(SecretKeys.pairingToken);
   final dir = await getApplicationSupportDirectory();
   final host = PhoneBrainHost(
+    identity: linkIdentityFor(ref),
     brain: () => _currentBrain(ref),
     token: () => token,
     memory: PcMemory(
